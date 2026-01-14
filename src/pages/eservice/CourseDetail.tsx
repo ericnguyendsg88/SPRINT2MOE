@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, DollarSign, GraduationCap, Building, Clock, CreditCard, RefreshCw, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, GraduationCap, Building, CreditCard, RefreshCw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/shared/DataTable';
@@ -22,7 +22,7 @@ const billingCycleLabels: Record<BillingCycle, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   biannually: 'Bi-annually',
-  yearly: 'Yearly',
+  yearly: 'Annually',
   one_time: 'One Time',
 };
 
@@ -39,10 +39,9 @@ const DEFAULT_COURSE_INFO_FIELDS = [
   { key: 'payment_type', label: 'Payment Type', visible: true, order: 4 },
   { key: 'billing_cycle', label: 'Billing Cycle', visible: true, order: 5 },
   { key: 'status', label: 'Status', visible: true, order: 6 },
-  { key: 'total_fee', label: 'Total Fee', visible: true, order: 7 },
+  { key: 'fee', label: 'Fee per Cycle', visible: true, order: 7 },
   { key: 'mode_of_training', label: 'Mode of Training', visible: false, order: 8 },
   { key: 'enrolled_since', label: 'Enrolled Since', visible: false, order: 9 },
-  { key: 'fee', label: 'Fee per Cycle', visible: false, order: 10 },
 ];
 
 const DEFAULT_SECTIONS = ['summary', 'course-info', 'outstanding', 'history'];
@@ -453,12 +452,12 @@ export default function EServiceCourseDetail() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-accent/10">
-                <Clock className="h-5 w-5 text-accent" />
+                <DollarSign className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Payment Type</p>
+                <p className="text-sm text-muted-foreground">Total Fee</p>
                 <p className="text-2xl font-bold">
-                  {isOneTimePayment(course.billing_cycle) ? 'One Time' : billingCycleLabels[course.billing_cycle as BillingCycle]}
+                  ${totalCourseFee.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -524,10 +523,6 @@ export default function EServiceCourseDetail() {
                   status: {
                     icon: <CheckCircle className="h-5 w-5 text-muted-foreground mt-0.5" />,
                     value: <StatusBadge status={course.status} />,
-                  },
-                  total_fee: {
-                    icon: <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />,
-                    value: `$${totalCourseFee.toFixed(2)}`,
                   },
                   fee: {
                     icon: <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />,

@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Download, UserPlus, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, X, Check } from 'lucide-react';
+import { Search, Plus, Download, UserPlus, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, X, Check, EyeOff, Eye, GraduationCap, School, Users, Wallet, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DateInput } from '@/components/ui/date-input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useAccountHolders, useCreateAccountHolder } from '@/hooks/useAccountHolders';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseCharges } from '@/hooks/useCourseCharges';
-import { formatDate } from '@/lib/dateUtils';
+import { formatDate, formatTime } from '@/lib/dateUtils';
 import {
   Select,
   SelectContent,
@@ -67,6 +68,7 @@ export default function AccountManagement() {
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
   
   // Form state for adding student
   const [nric, setNric] = useState('');
@@ -76,8 +78,10 @@ export default function AccountManagement() {
   const [phone, setPhone] = useState('');
   const [residentialAddress, setResidentialAddress] = useState('');
   const [mailingAddress, setMailingAddress] = useState('');
+  const [residentialStatus, setResidentialStatus] = useState('');
   
   const [educationLevel, setEducationLevel] = useState<string>('');
+  const [nricDataRetrieved, setNricDataRetrieved] = useState(false);
   
 
   // Page layout for drag-and-drop
@@ -114,6 +118,15 @@ export default function AccountManagement() {
       age--;
     }
     return age;
+  };
+
+  // Helper function to determine if account is active (inactive if age > 30 OR manually set)
+  const isAccountActive = (account: any) => {
+    // Check manual status first, then fall back to age-based calculation
+    if (account.status && account.status !== 'pending') {
+      return account.status === 'active';
+    }
+    return calculateAge(account.date_of_birth) <= 30;
   };
 
   // Helper function to get payment status for an account
@@ -168,11 +181,18 @@ export default function AccountManagement() {
       const matchesAgeMin = !ageMin || age >= parseInt(ageMin);
       const matchesAgeMax = !ageMax || age <= parseInt(ageMax);
 
+      // Active/Inactive status filter
+      // When showInactive is true: show ONLY inactive accounts (age > 30)
+      // When showInactive is false: show ONLY active accounts (age <= 30)
+      const isActive = isAccountActive(account);
+      const matchesActiveStatus = showInactive ? !isActive : isActive;
+
       return matchesSearch && matchesEducation && 
              matchesPaymentStatus && matchesSchoolingStatus &&
              matchesResidentialStatus &&
              matchesBalanceMin && matchesBalanceMax &&
-             matchesAgeMin && matchesAgeMax;
+             matchesAgeMin && matchesAgeMax &&
+             matchesActiveStatus;
     });
 
     // Sort the filtered results
@@ -205,8 +225,8 @@ export default function AccountManagement() {
 
     return filtered;
   }, [accountHolders, searchQuery, educationFilter, paymentStatusFilter, 
-      schoolingStatusFilter, residentialStatusFilter, balanceMin, balanceMax, ageMin, ageMax, sortField, sortDirection,
-      courseCharges, enrollments]);
+      schoolingStatusFilter, residentialStatusFilter, balanceMin, balanceMax, ageMin, ageMax, 
+      showInactive, sortField, sortDirection, courseCharges, enrollments]);
 
   // Handle sort toggle
   const handleSort = (field: SortField) => {
@@ -328,9 +348,10 @@ export default function AccountManagement() {
     setPhone('');
     setResidentialAddress('');
     setMailingAddress('');
+    setResidentialStatus('');
     
     setEducationLevel('');
-    
+    setNricDataRetrieved(false);
   };
 
   const handleCreateAccount = async () => {
@@ -338,16 +359,22 @@ export default function AccountManagement() {
       toast.error('Please enter NRIC');
       return;
     }
-    if (!fullName.trim()) {
-      toast.error('Please enter full name');
+    if (!nricDataRetrieved) {
+      toast.error('Please verify NRIC first');
       return;
     }
-    if (!dateOfBirth) {
-      toast.error('Please enter date of birth');
-      return;
-    }
-    if (!email.trim()) {
-      toast.error('Please enter email');
+
+    // Check if account already exists in the database
+    const existingAccount = accountHolders.find(
+      account => account.nric.toLowerCase() === nric.trim().toLowerCase()
+    );
+
+    if (existingAccount) {
+      toast.info('This account already exists in the system. Redirecting to account details...');
+      setIsAddStudentOpen(false);
+      resetForm();
+      // Redirect to the existing account's detail page
+      navigate(`/admin/accounts/${existingAccount.id}`);
       return;
     }
 
@@ -365,7 +392,7 @@ export default function AccountManagement() {
         in_school: 'not_in_school',
         education_level: (educationLevel || null) as any,
         continuing_learning: null,
-        residential_status: 'sc',
+        residential_status: (residentialStatus || 'sc') as any,
       });
       resetForm();
       setIsAddStudentOpen(false);
@@ -406,59 +433,119 @@ export default function AccountManagement() {
                   Manage all accounts
                 </p>
               </div>
-              <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="accent">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create Account
-                  </Button>
-                </DialogTrigger>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant={showInactive ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowInactive(!showInactive)}
+                >
+                  {showInactive ? (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Showing Inactive
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Show Inactive
+                    </>
+                  )}
+                </Button>
+                <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="accent">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Account
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="sm:max-w-[550px]">
                   <DialogHeader>
                     <DialogTitle>Add New Student</DialogTitle>
                     <DialogDescription>
-                      Manually create an education account for exception cases.
+                      Enter NRIC to retrieve student information from the national database. Fields will be enabled after NRIC verification.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
                         <Label htmlFor="nric">NRIC *</Label>
-                        <Input 
-                          id="nric" 
-                          placeholder="S1234567A" 
-                          value={nric}
-                          onChange={(e) => setNric(e.target.value)}
-                        />
+                        <div className="flex gap-2">
+                          <Input 
+                            id="nric" 
+                            placeholder="S1234567A" 
+                            value={nric}
+                            onChange={(e) => setNric(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              if (nric.trim()) {
+                                // Search for account with matching NRIC in the full accountHolders list
+                                const existingAccount = accountHolders.find(
+                                  account => account.nric.toLowerCase() === nric.trim().toLowerCase()
+                                );
+                                
+                                if (existingAccount) {
+                                  // Auto-fill all fields with retrieved data
+                                  setFullName(existingAccount.name);
+                                  setDateOfBirth(existingAccount.date_of_birth);
+                                  setEmail(existingAccount.email);
+                                  setPhone(existingAccount.phone || '');
+                                  setResidentialAddress(existingAccount.residential_address || '');
+                                  setMailingAddress(existingAccount.mailing_address || '');
+                                  setEducationLevel(existingAccount.education_level || '');
+                                  setResidentialStatus(existingAccount.residential_status || 'sc');
+                                  setNricDataRetrieved(true);
+                                  toast.success('NRIC verified. Student data retrieved and auto-filled.');
+                                } else {
+                                  toast.error('NRIC not found in database. Please check the NRIC or contact support.');
+                                }
+                              } else {
+                                toast.error('Please enter a valid NRIC');
+                              }
+                            }}
+                            disabled={!nric.trim() || nricDataRetrieved}
+                          >
+                            {nricDataRetrieved ? <Check className="h-4 w-4" /> : 'Verify'}
+                          </Button>
+                        </div>
+                        {nricDataRetrieved && (
+                          <p className="text-xs text-success">✓ NRIC verified</p>
+                        )}
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="name">Full Name *</Label>
+                        <Label htmlFor="name">Full Name</Label>
                         <Input 
                           id="name" 
-                          placeholder="Enter full name" 
+                          placeholder="Auto-filled from NRIC verification" 
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
+                          disabled={true}
                         />
                       </div>
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
-                        <Label htmlFor="dob">Date of Birth *</Label>
+                        <Label htmlFor="dob">Date of Birth</Label>
                         <DateInput 
                           id="dob" 
                           value={dateOfBirth}
                           onChange={setDateOfBirth}
+                          disabled={true}
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="email">Email *</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input 
                           id="email" 
                           type="email" 
-                          placeholder="email@example.com" 
+                          placeholder="Auto-filled from NRIC verification" 
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
+                          disabled={true}
                         />
                       </div>
                     </div>
@@ -467,9 +554,10 @@ export default function AccountManagement() {
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input 
                         id="phone" 
-                        placeholder="+65 9XXX XXXX" 
+                        placeholder="Auto-filled from NRIC verification" 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        disabled={true}
                       />
                     </div>
 
@@ -493,9 +581,20 @@ export default function AccountManagement() {
                       <Label htmlFor="residentialAddress">Registered Address</Label>
                       <Input 
                         id="residentialAddress" 
-                        placeholder="Enter registered address" 
+                        placeholder="Auto-filled from NRIC verification" 
                         value={residentialAddress}
                         onChange={(e) => setResidentialAddress(e.target.value)}
+                        disabled={true}
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="residentialStatus">Residential Status</Label>
+                      <Input 
+                        id="residentialStatus" 
+                        placeholder="Auto-filled from NRIC verification" 
+                        value={residentialStatus === 'sc' ? 'Singapore Citizen' : residentialStatus === 'spr' ? 'Permanent Resident' : residentialStatus === 'non_resident' ? 'Non-Resident' : ''}
+                        disabled={true}
                       />
                     </div>
 
@@ -503,9 +602,10 @@ export default function AccountManagement() {
                       <Label htmlFor="mailingAddress">Mailing Address</Label>
                       <Input 
                         id="mailingAddress" 
-                        placeholder="Enter mailing address (if different)" 
+                        placeholder="Auto-filled from NRIC verification" 
                         value={mailingAddress}
                         onChange={(e) => setMailingAddress(e.target.value)}
+                        disabled={true}
                       />
                     </div>
                   </div>
@@ -523,7 +623,8 @@ export default function AccountManagement() {
                     </Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              </div>
             </div>
           </ResizableSection>
         );
@@ -543,7 +644,7 @@ export default function AccountManagement() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, NRIC or email..."
+                    placeholder="Search by name or NRIC..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -553,7 +654,10 @@ export default function AccountManagement() {
                 {/* All filters row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t">
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Education Level</Label>
+                    <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <GraduationCap className="h-4 w-4" />
+                      Education Level
+                    </Label>
                     <Select 
                       value={educationFilter.length === 0 ? 'all' : 'custom'}
                       onValueChange={(value) => {
@@ -571,19 +675,25 @@ export default function AccountManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <div 
-                          className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                          className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                           onClick={() => setEducationFilter([])}
                         >
-                          {educationFilter.length === 0 && <Check className="absolute right-2 h-4 w-4" />}
+                          <Checkbox 
+                            checked={educationFilter.length === 0}
+                            className="pointer-events-none"
+                          />
                           All Levels
                         </div>
                         {Object.entries(educationLevelLabels).map(([value, label]) => (
                           <div
                             key={value}
-                            className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                            className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleEducationFilter(value); }}
                           >
-                            {educationFilter.includes(value) && <Check className="absolute right-2 h-4 w-4" />}
+                            <Checkbox 
+                              checked={educationFilter.includes(value)}
+                              className="pointer-events-none"
+                            />
                             {label}
                           </div>
                         ))}
@@ -592,7 +702,10 @@ export default function AccountManagement() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Schooling Status</Label>
+                    <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <School className="h-4 w-4" />
+                      Schooling Status
+                    </Label>
                     <Select 
                       value={schoolingStatusFilter.length === 0 ? 'all' : 'custom'}
                       onValueChange={(value) => {
@@ -610,19 +723,25 @@ export default function AccountManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <div 
-                          className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                          className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                           onClick={() => setSchoolingStatusFilter([])}
                         >
-                          {schoolingStatusFilter.length === 0 && <Check className="absolute right-2 h-4 w-4" />}
+                          <Checkbox 
+                            checked={schoolingStatusFilter.length === 0}
+                            className="pointer-events-none"
+                          />
                           All Students
                         </div>
                         {Object.entries(schoolingStatusLabels).map(([value, label]) => (
                           <div
                             key={value}
-                            className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                            className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSchoolingStatusFilter(value); }}
                           >
-                            {schoolingStatusFilter.includes(value) && <Check className="absolute right-2 h-4 w-4" />}
+                            <Checkbox 
+                              checked={schoolingStatusFilter.includes(value)}
+                              className="pointer-events-none"
+                            />
                             {label}
                           </div>
                         ))}
@@ -631,7 +750,10 @@ export default function AccountManagement() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Residential Status</Label>
+                    <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
+                      Residential Status
+                    </Label>
                     <Select 
                       value={residentialStatusFilter.length === 0 ? 'all' : 'custom'}
                       onValueChange={(value) => {
@@ -651,27 +773,29 @@ export default function AccountManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <div 
-                          className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                          className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                           onClick={() => setResidentialStatusFilter([])}
                         >
-                          {residentialStatusFilter.length === 0 && (
-                            <Check className="absolute right-2 h-4 w-4" />
-                          )}
+                          <Checkbox 
+                            checked={residentialStatusFilter.length === 0}
+                            className="pointer-events-none"
+                          />
                           All Statuses
                         </div>
                         {Object.entries(residentialStatusLabels).map(([value, label]) => (
                           <div
                             key={value}
-                            className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                            className="relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               toggleResidentialStatus(value);
                             }}
                           >
-                            {residentialStatusFilter.includes(value) && (
-                              <Check className="absolute right-2 h-4 w-4" />
-                            )}
+                            <Checkbox 
+                              checked={residentialStatusFilter.includes(value)}
+                              className="pointer-events-none"
+                            />
                             {label}
                           </div>
                         ))}
@@ -680,7 +804,10 @@ export default function AccountManagement() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Balance Range ($)</Label>
+                    <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Wallet className="h-4 w-4" />
+                      Balance Range ($)
+                    </Label>
                     <div className="flex gap-2">
                       <Input
                         type="number"
@@ -701,7 +828,10 @@ export default function AccountManagement() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Age Range</Label>
+                    <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
+                      Age Range
+                    </Label>
                     <div className="flex gap-2">
                       <Input
                         type="number"
@@ -850,7 +980,10 @@ export default function AccountManagement() {
                             {residentialStatusLabels[account.residential_status] || account.residential_status}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {formatDate(account.created_at)}
+                            <div>
+                              <div>{formatDate(account.created_at)}</div>
+                              <div className="text-xs text-muted-foreground/70 mt-0.5">{formatTime(account.created_at)}</div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">

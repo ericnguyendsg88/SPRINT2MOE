@@ -6,7 +6,7 @@ export interface Course {
   id: string;
   name: string;
   provider: string;
-  billing_cycle: 'monthly' | 'quarterly' | 'biannually' | 'yearly';
+  billing_cycle: 'monthly' | 'quarterly' | 'biannually' | 'yearly' | 'one_time';
   fee: number;
   description: string | null;
   status: 'active' | 'inactive';

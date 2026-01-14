@@ -198,27 +198,14 @@ export function DateInput({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="p-3 space-y-3">
-          {/* Manual date input */}
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Enter date (DD/MM/YY)</label>
-            <Input
-              value={inputValue}
-              onChange={handleInputChange}
-              onFocus={() => setInputFocused(true)}
-              onBlur={handleInputBlur}
-              placeholder="DD/MM/YY"
-              className="h-9"
-            />
-          </div>
-          
-          {/* Month and Year selectors */}
+        <div className="p-4 space-y-4">
+          {/* Month and Year selectors - Moved to top for better visibility */}
           <div className="flex gap-2">
             <Select
               value={getMonth(displayMonth).toString()}
               onValueChange={handleMonthChange}
             >
-              <SelectTrigger className="flex-1 h-9">
+              <SelectTrigger className="flex-1 h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -234,7 +221,7 @@ export function DateInput({
               value={getYear(displayMonth).toString()}
               onValueChange={handleYearChange}
             >
-              <SelectTrigger className="w-[100px] h-9">
+              <SelectTrigger className="w-[110px] h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="max-h-[200px]">
@@ -246,22 +233,61 @@ export function DateInput({
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Calendar */}
+          <Calendar
+            mode="single"
+            month={displayMonth}
+            onMonthChange={setDisplayMonth}
+            selected={selectedDate}
+            onSelect={handleSelect}
+            disabled={(date) => {
+              if (minDate && date < minDate) return true;
+              if (maxDate && date > maxDate) return true;
+              return false;
+            }}
+            initialFocus
+            className="pointer-events-auto"
+          />
+          
+          {/* Quick actions */}
+          <div className="flex gap-2 border-t pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => {
+                const today = new Date();
+                handleSelect(today);
+              }}
+            >
+              Today
+            </Button>
+            {selectedDate && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={() => handleSelect(undefined)}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+          
+          {/* Manual date input - Moved to bottom as alternative */}
+          <div className="space-y-1.5 border-t pt-3">
+            <label className="text-xs font-medium text-muted-foreground">Or type date manually</label>
+            <Input
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={() => setInputFocused(true)}
+              onBlur={handleInputBlur}
+              placeholder="DD/MM/YY"
+              className="h-9"
+            />
+          </div>
         </div>
-        
-        <Calendar
-          mode="single"
-          month={displayMonth}
-          onMonthChange={setDisplayMonth}
-          selected={selectedDate}
-          onSelect={handleSelect}
-          disabled={(date) => {
-            if (minDate && date < minDate) return true;
-            if (maxDate && date > maxDate) return true;
-            return false;
-          }}
-          initialFocus
-          className="p-3 pt-0 pointer-events-auto"
-        />
       </PopoverContent>
     </Popover>
   );

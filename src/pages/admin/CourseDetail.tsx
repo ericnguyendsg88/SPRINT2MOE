@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Pencil, Users, Calendar, DollarSign, MapPin, GraduationCap, Save, X, UserPlus, Trash2, Search, UserMinus, Lock } from 'lucide-react';
+import { ArrowLeft, Pencil, Users, Calendar, DollarSign, MapPin, GraduationCap, Save, X, UserPlus, Trash2, Search, UserMinus, Lock, Building, CreditCard, RefreshCw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DateInput } from '@/components/ui/date-input';
@@ -58,7 +58,7 @@ const billingCycleLabels: Record<BillingCycle, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   biannually: 'Biannually',
-  yearly: 'Yearly',
+  yearly: 'Annually',
 };
 
 const SCHOOL_PROVIDERS = [
@@ -153,13 +153,14 @@ export default function CourseDetail() {
   // Default course details fields configuration
   const defaultCourseFields: FieldDefinition[] = [
     { key: 'name', label: 'Course Name', visible: true, order: 0 },
-    { key: 'course_dates', label: 'Course Dates', visible: true, order: 1 },
-    { key: 'provider', label: 'Provider', visible: true, order: 2 },
-    { key: 'payment_type', label: 'Payment Type', visible: true, order: 3 },
-    { key: 'mode_of_training', label: 'Mode of Training', visible: true, order: 4 },
+    { key: 'provider', label: 'Provider', visible: true, order: 1 },
+    { key: 'course_start', label: 'Course Start', visible: true, order: 2 },
+    { key: 'course_end', label: 'Course End', visible: true, order: 3 },
+    { key: 'payment_type', label: 'Payment Type', visible: true, order: 4 },
     { key: 'billing_cycle', label: 'Billing Cycle', visible: true, order: 5 },
     { key: 'status', label: 'Status', visible: true, order: 6 },
-    { key: 'fee', label: 'Total Fee', visible: true, order: 7 },
+    { key: 'fee', label: 'Fee per Cycle', visible: true, order: 7 },
+    { key: 'mode_of_training', label: 'Mode of Training', visible: false, order: 8 },
   ];
 
   // Helper to calculate total fee based on course duration and billing cycle
@@ -568,63 +569,12 @@ export default function CourseDetail() {
         );
 
       case 'course-details': {
-        // Render field value based on key
-        const renderFieldValue = (fieldKey: string) => {
-          switch (fieldKey) {
-            case 'name':
-              return <p className="font-medium">{course.name}</p>;
-            case 'course_dates':
-              return (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {course.course_run_start 
-                      ? new Date(course.course_run_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '-'
-                    }
-                  </span>
-                  <span className="text-muted-foreground">to</span>
-                  <span className="font-medium">
-                    {course.course_run_end 
-                      ? new Date(course.course_run_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '-'
-                    }
-                  </span>
-                </div>
-              );
-            case 'provider':
-              return <p className="font-medium">{course.provider}</p>;
-            case 'mode_of_training':
-              return <p className="font-medium capitalize">{course.mode_of_training || 'Online'}</p>;
-            case 'status':
-              return <StatusBadge status={course.status} />;
-            case 'payment_type':
-              return (
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  getPaymentType() === 'Recurring' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-purple-100 text-purple-800'
-                }`}>
-                  {getPaymentType()}
-                </span>
-              );
-            case 'billing_cycle':
-              return <p className="font-medium">{getPaymentType() === 'One Time' ? 'N/A' : billingCycleLabels[course.billing_cycle as BillingCycle]}</p>;
-            case 'fee':
-              return <p className="font-medium">${calculateCourseTotalFee().toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>;
-            default:
-              return <p className="font-medium">-</p>;
-          }
-        };
-
         // Get visible fields sorted by order
         const visibleFields = [...courseFieldsConfig]
           .filter(f => f.visible)
+          // Hide 'fee' (Fee per Cycle) for one-time payment courses
+          .filter(f => !(f.key === 'fee' && getPaymentType() === 'One Time'))
           .sort((a, b) => a.order - b.order);
-        
-        // Split into two columns
-        const midpoint = Math.ceil(visibleFields.length / 2);
-        const leftFields = visibleFields.slice(0, midpoint);
-        const rightFields = visibleFields.slice(midpoint);
 
         return (
           <ResizableSection
@@ -756,22 +706,64 @@ export default function CourseDetail() {
                   );
                 })() : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      {leftFields.map(field => (
-                        <div key={field.key}>
-                          <p className="text-sm text-muted-foreground">{field.label}</p>
-                          {renderFieldValue(field.key)}
+                    {visibleFields.map((field) => {
+                      const fieldConfig: Record<string, { icon: React.ReactNode; value: React.ReactNode }> = {
+                        name: {
+                          icon: <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: course.name,
+                        },
+                        provider: {
+                          icon: <Building className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: course.provider,
+                        },
+                        mode_of_training: {
+                          icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: <span className="capitalize">{course.mode_of_training || 'Online'}</span>,
+                        },
+                        course_start: {
+                          icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: course.course_run_start 
+                            ? new Date(course.course_run_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : 'Not set',
+                        },
+                        course_end: {
+                          icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: course.course_run_end 
+                            ? new Date(course.course_run_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : 'Ongoing',
+                        },
+                        payment_type: {
+                          icon: <CreditCard className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: getPaymentType() === 'One Time' ? 'One Time' : 'Recurring',
+                        },
+                        billing_cycle: {
+                          icon: <RefreshCw className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: getPaymentType() === 'One Time' ? '—' : billingCycleLabels[course.billing_cycle as BillingCycle],
+                        },
+                        status: {
+                          icon: <CheckCircle className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: <StatusBadge status={course.status} />,
+                        },
+                        fee: {
+                          icon: <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />,
+                          value: getPaymentType() === 'One Time'
+                            ? `$${Number(course.fee).toFixed(2)}`
+                            : `$${Number(course.fee).toFixed(2)} / ${billingCycleLabels[course.billing_cycle as BillingCycle]}`,
+                        },
+                      };
+                      const config = fieldConfig[field.key];
+                      if (!config) return null;
+                      
+                      return (
+                        <div key={field.key} className="flex items-start gap-3">
+                          {config.icon}
+                          <div>
+                            <p className="text-sm text-muted-foreground">{field.label}</p>
+                            <p className="font-medium">{config.value}</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="space-y-4">
-                      {rightFields.map(field => (
-                        <div key={field.key}>
-                          <p className="text-sm text-muted-foreground">{field.label}</p>
-                          {renderFieldValue(field.key)}
-                        </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

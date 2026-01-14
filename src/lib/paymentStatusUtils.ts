@@ -243,5 +243,15 @@ export function formatPaymentMethod(method: string | null | undefined): string {
     'account_balance': 'Account Balance',
   };
   
+  // Check if it's a combined payment (format: method1+method2)
+  if (method.includes('+')) {
+    const methods = method.split('+');
+    const formattedMethods = methods.map(m => {
+      const trimmedMethod = m.trim().toLowerCase();
+      return methodLabels[trimmedMethod] || m.trim().charAt(0).toUpperCase() + m.trim().slice(1);
+    });
+    return formattedMethods.join(' and ');
+  }
+  
   return methodLabels[method.toLowerCase()] || method.charAt(0).toUpperCase() + method.slice(1);
 }

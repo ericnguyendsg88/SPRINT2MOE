@@ -1,0 +1,986 @@
+import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Upload, FileSpreadsheet, X, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/date-input';
+import { DataTable } from '@/components/shared/DataTable';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { useCourses, useCreateCourse, Course } from '@/hooks/useCourses';
+import { useEnrollments } from '@/hooks/useEnrollments';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import { usePageBuilder, LayoutItem } from '@/components/editor/PageBuilder';
+import { EditModeToggle } from '@/components/editor/EditModeToggle';
+import { SortableContainer } from '@/components/editor/SortableContainer';
+import { ResizableSection } from '@/components/editor/ResizableSection';
+import { SectionAdder } from '@/components/editor/SectionAdder';
+import { CustomSectionRenderer } from '@/components/editor/CustomSectionRenderer';
+import { useProviders } from '@/contexts/ProvidersContext';
+
+type BillingCycle = 'monthly' | 'quarterly' | 'biannually' | 'yearly';
+
+interface ImportedCourse {
+  name: string;
+  provider: string;
+  billingCycle: BillingCycle;
+  fee: number;
+  isValid: boolean;
+  errors: string[];
+}
+
+const billingCycleLabels: Record<BillingCycle, string> = {
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  biannually: 'Biannually',
+  yearly: 'Annually',
+};
+
+type PaymentOption = 'one_time' | 'recurring';
+
+const SECTION_IDS = ['header', 'search-actions', 'courses-table'];
+
+export default function CourseManagement() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get active providers from context
+  const { activeProviders } = useProviders();
+  const [isCourseDialogOpen, setIsCourseDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isReviewStep, setIsReviewStep] = useState(false);
+  
+  // Form state for new course
+  const [courseName, setCourseName] = useState('');
+  const [provider, setProvider] = useState('');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>('recurring');
+  const [fee, setFee] = useState('');
+  const [mainLocation, setMainLocation] = useState('');
+  const [modeOfTraining, setModeOfTraining] = useState('online');
+  const [registerBy, setRegisterBy] = useState('');
+  const [courseRunStart, setCourseRunStart] = useState('');
+  const [courseRunEnd, setCourseRunEnd] = useState('');
+  const [intakeSize, setIntakeSize] = useState('');
+  const [feeInputMode, setFeeInputMode] = useState<'per_cycle' | 'total'>('per_cycle'); // Tab for fee input
+  const [totalFeeInput, setTotalFeeInput] = useState(''); // Input for total fee
+  
+  const [importedCourses, setImportedCourses] = useState<ImportedCourse[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Page layout for drag-and-drop
+  const {
+    isEditMode,
+    toggleEditMode,
+    updateLayout,
+    updateSectionSize,
+    removeSection,
+    updateCustomSection,
+    resetLayout,
+    getOrderedItems,
+    getSectionSize,
+    isSaving,
+    handleAddSection,
+  } = usePageBuilder('course-management', SECTION_IDS);
+
+  // Fetch data from database
+  const { data: courses = [], isLoading: loadingCourses } = useCourses();
+  const { data: enrollments = [] } = useEnrollments();
+  const createCourseMutation = useCreateCourse();
+
+  const filteredCourses = courses.filter(course =>
+    course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    course.provider.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const resetForm = () => {
+    setCourseName('');
+    setProvider('');
+    setBillingCycle('monthly');
+    setPaymentOption('recurring');
+    setFee('');
+    setTotalFeeInput('');
+    setFeeInputMode('per_cycle');
+    setMainLocation('');
+    setModeOfTraining('online');
+    setRegisterBy('');
+    setCourseRunStart('');
+    setCourseRunEnd('');
+    setIntakeSize('');
+    setIsReviewStep(false);
+  };
+
+  const validateForm = (): boolean => {
+    if (!courseName.trim()) {
+      toast.error('Please enter a course name');
+      return false;
+    }
+    if (!provider) {
+      toast.error('Please select a provider');
+      return false;
+    }
+    if (!modeOfTraining) {
+      toast.error('Please select mode of training');
+      return false;
+    }
+    if (!courseRunStart) {
+      toast.error('Please enter course start date');
+      return false;
+    }
+    if (!courseRunEnd) {
+      toast.error('Please enter course end date');
+      return false;
+    }
+    if (feeInputMode === 'per_cycle') {
+      if (!fee || parseFloat(fee) <= 0) {
+        toast.error('Please enter a valid fee per cycle');
+        return false;
+      }
+    } else {
+      if (!totalFeeInput || parseFloat(totalFeeInput) <= 0) {
+        toast.error('Please enter a valid total fee');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleProceedToReview = () => {
+    if (validateForm()) {
+      setIsReviewStep(true);
+    }
+  };
+
+  const handleCreateCourse = async () => {
+    // Calculate actual fee to store (per cycle)
+    let actualFee: number;
+    if (feeInputMode === 'total' && paymentOption === 'recurring') {
+      // Convert total fee to per-cycle fee based on actual number of cycles
+      const numberOfCycles = getNumberOfCycles();
+      actualFee = parseFloat(totalFeeInput) / numberOfCycles;
+    } else {
+      actualFee = parseFloat(fee);
+    }
+    
+    try {
+      await createCourseMutation.mutateAsync({
+        name: courseName.trim(),
+        provider,
+        billing_cycle: paymentOption === 'one_time' ? 'yearly' : billingCycle,
+        fee: actualFee,
+        status: 'active',
+        description: null,
+        main_location: mainLocation || null,
+        mode_of_training: modeOfTraining,
+        register_by: registerBy || null,
+        course_run_start: courseRunStart || null,
+        course_run_end: courseRunEnd || null,
+        intake_size: intakeSize ? parseInt(intakeSize) : 0,
+      });
+      resetForm();
+      setIsCourseDialogOpen(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  // Calculate display values for review
+  // Get number of billing cycles based on course dates
+  const getNumberOfCycles = (): number => {
+    if (!courseRunStart || !courseRunEnd || paymentOption === 'one_time') {
+      return 1;
+    }
+    
+    const startDate = new Date(courseRunStart);
+    const endDate = new Date(courseRunEnd);
+    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                       (endDate.getMonth() - startDate.getMonth());
+    
+    const cycleMonths: Record<string, number> = {
+      monthly: 1,
+      quarterly: 3,
+      biannually: 6,
+      yearly: 12,
+    };
+    
+    const cycleLength = cycleMonths[billingCycle] || 1;
+    const effectiveMonths = monthsDiff + (endDate.getDate() > startDate.getDate() ? 1 : 0);
+    return Math.max(1, Math.ceil(effectiveMonths / cycleLength));
+  };
+
+  // Calculate per-cycle fee based on total and number of cycles
+  const getPerCycleFee = () => {
+    if (paymentOption === 'one_time') return parseFloat(fee) || 0;
+    
+    // If entering total fee, divide by actual number of cycles from course dates
+    if (feeInputMode === 'total') {
+      const totalNum = parseFloat(totalFeeInput);
+      if (!totalNum) return 0;
+      const numberOfCycles = getNumberOfCycles();
+      return totalNum / numberOfCycles;
+    }
+    return parseFloat(fee) || 0;
+  };
+
+  // Calculate total fee for display based on course dates and billing cycle
+  const calculateTotalFee = () => {
+    if (paymentOption === 'one_time') {
+      const feeNum = parseFloat(fee);
+      return feeNum ? `SGD ${feeNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-';
+    }
+    
+    // For recurring courses, calculate based on course start and end dates
+    if (!courseRunStart || !courseRunEnd) {
+      return '-';
+    }
+    
+    const numberOfCycles = getNumberOfCycles();
+    const perCycleFee = getPerCycleFee();
+    const totalFee = perCycleFee * numberOfCycles;
+    
+    return `SGD ${totalFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+  };
+
+  const parseBillingCycle = (value: string): BillingCycle | null => {
+    const normalized = value?.toLowerCase()?.trim();
+    if (['monthly', 'month', 'mo'].includes(normalized)) return 'monthly';
+    if (['quarterly', 'quarter', 'qtr'].includes(normalized)) return 'quarterly';
+    if (['yearly', 'year', 'annual', 'yr'].includes(normalized)) return 'yearly';
+    return null;
+  };
+
+  const validateCourse = (row: Record<string, unknown>): ImportedCourse => {
+    const errors: string[] = [];
+    
+    const name = String(row['Course Name'] || row['name'] || row['Name'] || '').trim();
+    const providerVal = String(row['Provider'] || row['provider'] || '').trim();
+    const billingValue = String(row['Billing Cycle'] || row['billingCycle'] || row['Billing'] || 'monthly');
+    const feeValue = parseFloat(String(row['Fee'] || row['fee'] || row['Price'] || '0'));
+
+    if (!name) errors.push('Course name is required');
+    if (!providerVal) errors.push('Provider is required');
+    
+    const billing = parseBillingCycle(billingValue);
+    if (!billing) errors.push('Invalid billing cycle');
+    
+    if (isNaN(feeValue) || feeValue <= 0) errors.push('Valid fee is required');
+
+    return {
+      name,
+      provider: providerVal,
+      billingCycle: billing || 'monthly',
+      fee: isNaN(feeValue) ? 0 : feeValue,
+      isValid: errors.length === 0,
+      errors,
+    };
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
+    
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+
+      if (jsonData.length === 0) {
+        toast.error('No data found in file');
+        setIsProcessing(false);
+        return;
+      }
+
+      const importedData = jsonData.map(validateCourse);
+      setImportedCourses(importedData);
+      setIsImportDialogOpen(true);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('Failed to parse file. Please check the format.');
+    } finally {
+      setIsProcessing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleImportCourses = async () => {
+    const validCourses = importedCourses.filter(c => c.isValid);
+    if (validCourses.length === 0) {
+      toast.error('No valid courses to import');
+      return;
+    }
+    
+    try {
+      for (const c of validCourses) {
+        await createCourseMutation.mutateAsync({
+          name: c.name,
+          provider: c.provider,
+          billing_cycle: c.billingCycle,
+          fee: c.fee,
+          status: 'active',
+          description: null,
+          main_location: null,
+          mode_of_training: 'online',
+          register_by: null,
+          course_run_start: null,
+          course_run_end: null,
+          intake_size: 0,
+        });
+      }
+      toast.success(`${validCourses.length} course(s) imported successfully`);
+      setIsImportDialogOpen(false);
+      setImportedCourses([]);
+    } catch (error) {
+      toast.error('Failed to import some courses');
+    }
+  };
+
+  const removeImportedCourse = (index: number) => {
+    setImportedCourses(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCourseClick = (course: Course) => {
+    navigate(`/admin/courses/${course.id}`);
+  };
+
+  // Helper to calculate total fee based on course duration and billing cycle
+  const calculateCourseTotalFee = (course: Course) => {
+    if (!course.course_run_start || !course.course_run_end) {
+      // If no dates, just return the fee as-is
+      return Number(course.fee);
+    }
+    
+    const startDate = new Date(course.course_run_start);
+    const endDate = new Date(course.course_run_end);
+    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+    
+    // Calculate number of billing cycles
+    let cycles = 1;
+    switch (course.billing_cycle) {
+      case 'monthly':
+        cycles = monthsDiff;
+        break;
+      case 'quarterly':
+        cycles = Math.ceil(monthsDiff / 3);
+        break;
+      case 'biannually':
+        cycles = Math.ceil(monthsDiff / 6);
+        break;
+      case 'yearly':
+        cycles = Math.ceil(monthsDiff / 12);
+        break;
+    }
+    
+    return Number(course.fee) * cycles;
+  };
+
+  // Helper to determine if course is one-time or recurring payment
+  const getPaymentType = (course: Course) => {
+    if (!course.course_run_start || !course.course_run_end) {
+      return 'Recurring';
+    }
+    
+    const startDate = new Date(course.course_run_start);
+    const endDate = new Date(course.course_run_end);
+    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+    
+    // Calculate number of billing cycles
+    let cycles = 1;
+    switch (course.billing_cycle) {
+      case 'monthly':
+        cycles = monthsDiff;
+        break;
+      case 'quarterly':
+        cycles = Math.ceil(monthsDiff / 3);
+        break;
+      case 'biannually':
+        cycles = Math.ceil(monthsDiff / 6);
+        break;
+      case 'yearly':
+        cycles = Math.ceil(monthsDiff / 12);
+        break;
+    }
+    
+    return cycles <= 1 ? 'One Time' : 'Recurring';
+  };
+
+  const courseColumns = [
+    { 
+      key: 'courseId', 
+      header: 'Course ID',
+      render: (item: Course) => (
+        <span className="font-mono text-sm text-muted-foreground">{item.id.slice(0, 8).toUpperCase()}</span>
+      )
+    },
+    { 
+      key: 'name', 
+      header: 'Course Name',
+      render: (item: Course) => (
+        <p className="font-medium text-foreground">{item.name}</p>
+      )
+    },
+    { 
+      key: 'provider', 
+      header: 'Provider',
+      render: (item: Course) => (
+        <span className="text-muted-foreground">{item.provider}</span>
+      )
+    },
+    { 
+      key: 'modeOfTraining', 
+      header: 'Mode',
+      render: (item: Course) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground capitalize">
+          {item.mode_of_training || 'Online'}
+        </span>
+      )
+    },
+    { 
+      key: 'courseStart', 
+      header: 'Course Start',
+      render: (item: Course) => (
+        <span className="text-muted-foreground">
+          {item.course_run_start ? new Date(item.course_run_start).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }) : '-'}
+        </span>
+      )
+    },
+    { 
+      key: 'courseEnd', 
+      header: 'Course End',
+      render: (item: Course) => (
+        <span className="text-muted-foreground">
+          {item.course_run_end ? new Date(item.course_run_end).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }) : '-'}
+        </span>
+      )
+    },
+    { 
+      key: 'paymentType', 
+      header: 'Payment Type',
+      render: (item: Course) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          getPaymentType(item) === 'One Time' 
+            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' 
+            : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+        }`}>
+          {getPaymentType(item)}
+        </span>
+      )
+    },
+    { 
+      key: 'fee', 
+      header: 'Fee/Cycle',
+      render: (item: Course) => (
+        <span className="font-semibold text-foreground">
+          ${Number(item.fee).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+        </span>
+      )
+    },
+    { 
+      key: 'enrolled', 
+      header: 'Enrolled',
+      render: (item: Course) => {
+        const count = enrollments.filter(e => e.course_id === item.id && e.status === 'active').length;
+        return <span className="text-muted-foreground">{count} students</span>;
+      }
+    },
+  ];
+
+  const renderSection = (item: LayoutItem) => {
+    // Check if it's a custom section
+    if (item.isCustom && item.customConfig) {
+      return (
+        <CustomSectionRenderer
+          key={item.id}
+          section={item}
+          isEditMode={isEditMode}
+          onSizeChange={(size) => updateSectionSize(item.id, size)}
+          onRemove={() => removeSection(item.id)}
+          onUpdateConfig={(config) => updateCustomSection(item.id, config)}
+        />
+      );
+    }
+
+    switch (item.id) {
+      case 'header':
+        return (
+          <ResizableSection
+            key={item.id}
+            id={item.id}
+            size={getSectionSize(item.id)}
+            onSizeChange={(size) => updateSectionSize(item.id, size)}
+            isEditMode={isEditMode}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Course Management</h1>
+                <p className="text-muted-foreground mt-1">
+                  Manage courses and student enrollments. Click on a course to view details.
+                </p>
+              </div>
+            </div>
+          </ResizableSection>
+        );
+
+      case 'search-actions':
+        return (
+          <ResizableSection
+            key={item.id}
+            id={item.id}
+            size={getSectionSize(item.id)}
+            onSizeChange={(size) => updateSectionSize(item.id, size)}
+            isEditMode={isEditMode}
+          >
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search courses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="course-file-upload"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessing}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isProcessing ? 'Processing...' : 'Import CSV/Excel'}
+                  </Button>
+                  <Dialog open={isCourseDialogOpen} onOpenChange={setIsCourseDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="accent">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Course
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>{isReviewStep ? 'Review Course Details' : 'Add New Course'}</DialogTitle>
+                        <DialogDescription>
+                          {isReviewStep ? 'Please review the course details before adding' : 'Add a course to the education account system'}
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      {!isReviewStep ? (
+                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                          <div className="grid gap-2">
+                            <Label htmlFor="courseName">Course Name <span className="text-destructive">*</span></Label>
+                            <Input 
+                              id="courseName" 
+                              placeholder="e.g., Python Programming" 
+                              value={courseName}
+                              onChange={(e) => setCourseName(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Provider <span className="text-destructive">*</span></Label>
+                            <Select value={provider} onValueChange={setProvider}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select school" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {activeProviders.map(school => (
+                                  <SelectItem key={school} value={school}>
+                                    {school}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Mode of Training <span className="text-destructive">*</span></Label>
+                            <Select value={modeOfTraining} onValueChange={setModeOfTraining}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="online">Online</SelectItem>
+                                <SelectItem value="in-person">In-Person</SelectItem>
+                                <SelectItem value="hybrid">Hybrid</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="courseRunStart">Course Start Date <span className="text-destructive">*</span></Label>
+                              <DateInput 
+                                id="courseRunStart" 
+                                value={courseRunStart}
+                                onChange={setCourseRunStart}
+                                placeholder="Select start date"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="courseRunEnd">Course End Date <span className="text-destructive">*</span></Label>
+                              <DateInput 
+                                id="courseRunEnd" 
+                                value={courseRunEnd}
+                                onChange={setCourseRunEnd}
+                                minDate={courseRunStart ? new Date(courseRunStart) : undefined}
+                                placeholder="Select end date"
+                              />
+                              {courseRunStart && !courseRunEnd && (
+                                <p className="text-xs text-muted-foreground">
+                                  Must be after {new Date(courseRunStart).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Payment Option <span className="text-destructive">*</span></Label>
+                            <Select value={paymentOption} onValueChange={(value: PaymentOption) => setPaymentOption(value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment option" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="one_time">One Time</SelectItem>
+                                <SelectItem value="recurring">Recurring</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {paymentOption === 'recurring' && (
+                            <div className="grid gap-2">
+                              <Label>Billing Cycle</Label>
+                              <Select 
+                                value={billingCycle} 
+                                onValueChange={(value: BillingCycle) => setBillingCycle(value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select billing cycle" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(() => {
+                                    // Calculate course duration in months
+                                    let durationMonths = 12; // Default to show all options
+                                    if (courseRunStart && courseRunEnd) {
+                                      const start = new Date(courseRunStart);
+                                      const end = new Date(courseRunEnd);
+                                      durationMonths = (end.getFullYear() - start.getFullYear()) * 12 + 
+                                                      (end.getMonth() - start.getMonth());
+                                    }
+                                    
+                                    return (
+                                      <>
+                                        <SelectItem value="monthly">Monthly</SelectItem>
+                                        {durationMonths >= 3 && <SelectItem value="quarterly">Quarterly</SelectItem>}
+                                        {durationMonths >= 6 && <SelectItem value="biannually">Biannually</SelectItem>}
+                                        {durationMonths >= 12 && <SelectItem value="yearly">Annually</SelectItem>}
+                                      </>
+                                    );
+                                  })()}
+                                </SelectContent>
+                              </Select>
+                              {courseRunStart && courseRunEnd && (() => {
+                                const start = new Date(courseRunStart);
+                                const end = new Date(courseRunEnd);
+                                const months = (end.getFullYear() - start.getFullYear()) * 12 + 
+                                              (end.getMonth() - start.getMonth());
+                                return (
+                                  <p className="text-xs text-muted-foreground">
+                                    Course duration: {months} month{months !== 1 ? 's' : ''}
+                                  </p>
+                                );
+                              })()}
+                            </div>
+                          )}
+                          {paymentOption === 'one_time' ? (
+                            <div className="grid gap-2">
+                              <Label htmlFor="fee">Fee <span className="text-destructive">*</span></Label>
+                              <Input 
+                                id="fee" 
+                                type="number" 
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00" 
+                                value={fee}
+                                onChange={(e) => setFee(e.target.value)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="grid gap-2">
+                              <Label>Fee <span className="text-destructive">*</span></Label>
+                              <Tabs value={feeInputMode} onValueChange={(v) => setFeeInputMode(v as 'per_cycle' | 'total')}>
+                                <TabsList className="grid w-full grid-cols-2">
+                                  <TabsTrigger value="per_cycle">Per Cycle</TabsTrigger>
+                                  <TabsTrigger value="total">Total Fee</TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="per_cycle" className="mt-2">
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Fee per cycle" 
+                                    value={fee}
+                                    onChange={(e) => setFee(e.target.value)}
+                                  />
+                                  {fee && courseRunStart && courseRunEnd && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Total: {calculateTotalFee()} ({getNumberOfCycles()} {billingCycle} cycles)
+                                    </p>
+                                  )}
+                                </TabsContent>
+                                <TabsContent value="total" className="mt-2">
+                                  <Input 
+                                    type="number" 
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Total course fee" 
+                                    value={totalFeeInput}
+                                    onChange={(e) => setTotalFeeInput(e.target.value)}
+                                  />
+                                  {totalFeeInput && courseRunStart && courseRunEnd && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Per {billingCycleLabels[billingCycle]}: SGD {getPerCycleFee().toFixed(2)} ({getNumberOfCycles()} cycles)
+                                    </p>
+                                  )}
+                                </TabsContent>
+                              </Tabs>
+                            </div>
+                          )}
+                          <div className="flex justify-end gap-3 pt-4">
+                            <Button variant="outline" onClick={() => { resetForm(); setIsCourseDialogOpen(false); }}>
+                              Cancel
+                            </Button>
+                            <Button variant="accent" onClick={handleProceedToReview}>
+                              Review & Add
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4 py-4">
+                          <div className="rounded-lg border border-border p-4 space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Course Name</span>
+                              <span className="font-medium text-foreground">{courseName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Provider</span>
+                              <span className="font-medium text-foreground">{provider}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Mode of Training</span>
+                              <span className="font-medium text-foreground capitalize">{modeOfTraining}</span>
+                            </div>
+                            {courseRunStart && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Course Start</span>
+                                <span className="font-medium text-foreground">{new Date(courseRunStart).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {courseRunEnd && (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Course End</span>
+                                <span className="font-medium text-foreground">{new Date(courseRunEnd).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Payment</span>
+                              <span className="font-medium text-foreground">
+                                {paymentOption === 'one_time' ? 'One Time' : billingCycleLabels[billingCycle]}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Fee (per {paymentOption === 'one_time' ? 'course' : billingCycleLabels[billingCycle].toLowerCase()})</span>
+                              <span className="font-medium text-foreground">SGD {getPerCycleFee().toFixed(2)}</span>
+                            </div>
+                            {paymentOption === 'recurring' && courseRunStart && courseRunEnd && (
+                              <div className="flex justify-between border-t border-border pt-2">
+                                <span className="text-muted-foreground">Total ({getNumberOfCycles()} {billingCycle} cycles)</span>
+                                <span className="font-bold text-foreground">{calculateTotalFee()}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex justify-end gap-3 pt-4">
+                            <Button variant="outline" onClick={() => setIsReviewStep(false)}>
+                              Back
+                            </Button>
+                            <Button 
+                              variant="accent" 
+                              onClick={handleCreateCourse}
+                              disabled={createCourseMutation.isPending}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              {createCourseMutation.isPending ? 'Adding...' : 'Confirm & Add Course'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            </div>
+          </ResizableSection>
+        );
+
+      case 'courses-table':
+        return (
+          <ResizableSection
+            key={item.id}
+            id={item.id}
+            size={getSectionSize(item.id)}
+            onSizeChange={(size) => updateSectionSize(item.id, size)}
+            isEditMode={isEditMode}
+          >
+            <DataTable
+              columns={courseColumns}
+              data={filteredCourses}
+              onRowClick={handleCourseClick}
+            />
+          </ResizableSection>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (loadingCourses) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading courses...</div>
+      </div>
+    );
+  }
+
+  const orderedItems = getOrderedItems();
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Edit Mode Toggle */}
+      <EditModeToggle
+        isEditMode={isEditMode}
+        onToggle={toggleEditMode}
+        isSaving={isSaving}
+        onReset={resetLayout}
+      />
+
+      {/* Sortable Sections */}
+      <SortableContainer
+        items={orderedItems}
+        onReorder={updateLayout}
+        isEditMode={isEditMode}
+      >
+        <div className="grid grid-cols-12 gap-6">
+          {orderedItems.map(renderSection)}
+        </div>
+      </SortableContainer>
+
+      {/* Section Adder */}
+      {isEditMode && (
+        <SectionAdder 
+          isEditMode={isEditMode}
+          onAddSection={handleAddSection} 
+        />
+      )}
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Import Courses</DialogTitle>
+            <DialogDescription>
+              Review the courses to be imported. Invalid entries are highlighted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {importedCourses.map((course, index) => (
+              <div 
+                key={index} 
+                className={`p-3 rounded-lg border ${course.isValid ? 'border-border bg-card' : 'border-destructive/50 bg-destructive/5'}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {course.isValid ? (
+                        <Check className="h-4 w-4 text-success" />
+                      ) : (
+                        <X className="h-4 w-4 text-destructive" />
+                      )}
+                      <span className="font-medium">{course.name || 'Unknown'}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {course.provider} • {billingCycleLabels[course.billingCycle]} • ${course.fee.toFixed(2)}
+                    </p>
+                    {!course.isValid && (
+                      <p className="text-xs text-destructive mt-1">
+                        {course.errors.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeImportedCourse(index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between items-center pt-4">
+            <p className="text-sm text-muted-foreground">
+              {importedCourses.filter(c => c.isValid).length} of {importedCourses.length} courses valid
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="accent" 
+                onClick={handleImportCourses}
+                disabled={importedCourses.filter(c => c.isValid).length === 0}
+              >
+                Import Valid Courses
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

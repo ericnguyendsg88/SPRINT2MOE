@@ -21,6 +21,23 @@ export function formatDate(date: Date | string | null | undefined): string {
 }
 
 /**
+ * Format time as HH:MM AM/PM (e.g., 02:30 PM)
+ */
+export function formatTime(date: Date | string | null | undefined): string {
+  if (!date) return '—';
+  
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(d.getTime())) return '—';
+  
+  return d.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+/**
  * Format a date as DD MMM YYYY (e.g., 12 Jan 2026) - for more detailed displays
  */
 export function formatDateLong(date: Date | string | null | undefined): string {
