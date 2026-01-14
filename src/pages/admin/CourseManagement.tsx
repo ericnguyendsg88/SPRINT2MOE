@@ -874,6 +874,7 @@ export default function CourseManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Course ID</TableHead>
                     <TableHead 
                       className="cursor-pointer hover:bg-muted/50 select-none"
                       onClick={() => handleSort('name')}
@@ -928,7 +929,7 @@ export default function CourseManagement() {
                 <TableBody>
                   {filteredAndSortedCourses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         No courses found matching your criteria
                       </TableCell>
                     </TableRow>
@@ -943,6 +944,9 @@ export default function CourseManagement() {
                           className="cursor-pointer hover:bg-muted/50" 
                           onClick={() => handleRowClick(course.id)}
                         >
+                          <TableCell className="font-mono text-sm text-muted-foreground">
+                            {course.id.substring(0, 8)}
+                          </TableCell>
                           <TableCell>
                             <p className="font-medium text-foreground">{course.name}</p>
                           </TableCell>
