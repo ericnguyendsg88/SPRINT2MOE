@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { DateInput } from '@/components/ui/date-input';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { useTopUpSchedules, useCreateTopUpSchedule, useDeleteTopUpSchedule } from '@/hooks/useTopUpSchedules';
+import { useTopUpSchedules, useCreateTopUpSchedule, useDeleteTopUpSchedule, useUpdateTopUpSchedule } from '@/hooks/useTopUpSchedules';
 import { useAccountHolders, useUpdateAccountHolder } from '@/hooks/useAccountHolders';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useCreateTransaction } from '@/hooks/useTransactions';
@@ -72,6 +72,9 @@ export default function TopUpManagement() {
   const [deleteScheduleConfirmOpen, setDeleteScheduleConfirmOpen] = useState(false);
   const [scheduleToDelete, setScheduleToDelete] = useState<{ id: string; name: string } | null>(null);
 
+  // Cancel schedule confirmation state
+  const [cancelScheduleConfirmOpen, setCancelScheduleConfirmOpen] = useState(false);
+
   // Detail view state
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedScheduleDetail, setSelectedScheduleDetail] = useState<typeof topUpSchedules[0] | null>(null);
@@ -93,6 +96,7 @@ export default function TopUpManagement() {
   const { data: enrollments = [] } = useEnrollments();
   const createScheduleMutation = useCreateTopUpSchedule();
   const deleteScheduleMutation = useDeleteTopUpSchedule();
+  const updateScheduleMutation = useUpdateTopUpSchedule();
   const updateAccountMutation = useUpdateAccountHolder();
   const createTransactionMutation = useCreateTransaction();
 
@@ -619,6 +623,24 @@ export default function TopUpManagement() {
     }
   };
 
+  const handleCancelSchedule = async () => {
+    if (!selectedScheduleDetail) return;
+    try {
+      await updateScheduleMutation.mutateAsync({
+        id: selectedScheduleDetail.id,
+        status: 'cancelled',
+      });
+      toast.success('Top-up order cancelled successfully');
+      setCancelScheduleConfirmOpen(false);
+      setShowDetailModal(false);
+    } catch (error: any) {
+      console.error('Error cancelling top-up order:', error);
+      toast.error('Failed to cancel top-up order', {
+        description: error?.message || 'Please try again or contact support'
+      });
+    }
+  };
+
   const scheduleColumns = [
     { 
       key: 'type', 
@@ -740,29 +762,6 @@ export default function TopUpManagement() {
           </span>
         </div>
       )
-    },
-    { 
-      key: 'actions', 
-      header: '',
-      render: (item: typeof topUpSchedules[0]) => {
-        const isUpcoming = item.status === 'scheduled';
-        if (!isUpcoming) return null;
-        
-        return (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={(e) => {
-              e.stopPropagation();
-              openDeleteScheduleConfirm(item);
-            }}
-            title="Cancel scheduled top-up"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        );
-      }
     },
   ];
 
@@ -1786,76 +1785,85 @@ export default function TopUpManagement() {
                 </div>
               )}
 
-              {/* Eligible Accounts List for Batch */}
-              {selectedScheduleDetail.type === 'batch' && selectedScheduleDetail.remarks && (() => {
-                const eligibleAccounts = getEligibleAccountsForBatch(selectedScheduleDetail.remarks);
-                return eligibleAccounts.length > 0 ? (
+              {/* Eligible Accounts List for Batch - Always show for batch orders */}
+              {selectedScheduleDetail.type === 'batch' && (() => {
+                const eligibleAccounts = selectedScheduleDetail.remarks 
+                  ? getEligibleAccountsForBatch(selectedScheduleDetail.remarks)
+                  : [];
+                
+                return (
                   <div className="space-y-3 border-t pt-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Eligible Accounts ({eligibleAccounts.length})</h3>
                       <p className="text-xs text-muted-foreground">All accounts matching the targeting criteria</p>
                     </div>
                     
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                      {eligibleAccounts.map((account, index) => {
-                        const birthDate = new Date(account.date_of_birth);
-                        const today = new Date();
-                        const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-                        const inSchool = isAccountInSchool(account.id);
-                        
-                        return (
-                          <div key={account.id} className="p-3 border rounded-lg hover:bg-muted/30 transition-colors">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">#{index + 1}</span>
-                                <button
-                                  className="font-medium text-primary hover:underline text-left"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleNavigateToStudent(account.id);
-                                  }}
-                                >
-                                  {account.name}
-                                </button>
+                    {eligibleAccounts.length > 0 ? (
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                        {eligibleAccounts.map((account, index) => {
+                          const birthDate = new Date(account.date_of_birth);
+                          const today = new Date();
+                          const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+                          const inSchool = isAccountInSchool(account.id);
+                          
+                          return (
+                            <div key={account.id} className="p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">#{index + 1}</span>
+                                  <button
+                                    className="font-medium text-primary hover:underline text-left"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleNavigateToStudent(account.id);
+                                    }}
+                                  >
+                                    {account.name}
+                                  </button>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground">Balance</p>
+                                  <p className="font-semibold text-sm">S${formatCurrency(Number(account.balance), 0)}</p>
+                                </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Balance</p>
-                                <p className="font-semibold text-sm">S${formatCurrency(Number(account.balance), 0)}</p>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground">NRIC</p>
+                                  <p className="font-medium">{account.nric}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Age</p>
+                                  <p className="font-medium">{age} years</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Education</p>
+                                  <p className="font-medium capitalize">{account.education_level?.replace('_', ' ') || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Status</p>
+                                  {inSchool ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-success/10 text-success border border-success/20">
+                                      In School
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border">
+                                      Not in School
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                              <div>
-                                <p className="text-muted-foreground">NRIC</p>
-                                <p className="font-medium">{account.nric}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Age</p>
-                                <p className="font-medium">{age} years</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Education</p>
-                                <p className="font-medium capitalize">{account.education_level?.replace('_', ' ') || '—'}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Status</p>
-                                {inSchool ? (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-success/10 text-success border border-success/20">
-                                    In School
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border">
-                                    Not in School
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg bg-muted/20">
+                        <p className="text-muted-foreground text-sm">No eligible accounts found for this batch order</p>
+                      </div>
+                    )}
                   </div>
-                ) : null;
+                );
               })()}
 
               {/* Remarks for Individual */}
@@ -1867,13 +1875,61 @@ export default function TopUpManagement() {
               )}
             </div>
           )}
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-between items-center gap-3">
+            {selectedScheduleDetail?.status === 'scheduled' && (
+              <Button 
+                variant="destructive" 
+                onClick={() => setCancelScheduleConfirmOpen(true)}
+              >
+                Cancel Top-up Order
+              </Button>
+            )}
+            <div className="flex-1"></div>
             <Button variant="outline" onClick={() => setShowDetailModal(false)}>
               Close
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Schedule Confirmation Dialog */}
+      <AlertDialog open={cancelScheduleConfirmOpen} onOpenChange={setCancelScheduleConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Top-up Order</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this scheduled top-up order? This will prevent the top-up from being executed and the status will be changed to "Cancelled".
+              {selectedScheduleDetail && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="font-medium text-foreground">
+                    {selectedScheduleDetail.type === 'batch' 
+                      ? selectedScheduleDetail.rule_name 
+                      : selectedScheduleDetail.account_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Amount: S${formatCurrency(Number(selectedScheduleDetail.amount), 0)}
+                    {selectedScheduleDetail.type === 'batch' && (
+                      <> • {selectedScheduleDetail.eligible_count} account(s)</>
+                    )}
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCancelScheduleConfirmOpen(false)}>
+              Keep Order
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleCancelSchedule}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={updateScheduleMutation.isPending}
+            >
+              {updateScheduleMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Batch Eligible Accounts Modal */}
       <Dialog open={showBatchEligibleAccounts} onOpenChange={setShowBatchEligibleAccounts}>

@@ -23,7 +23,7 @@ const statusStyles: Record<Status, string> = {
   closed: 'bg-muted text-muted-foreground border-muted',
   completed: 'bg-success/10 text-success border-success/20',
   failed: 'bg-destructive/10 text-destructive border-destructive/20',
-  cancelled: 'bg-muted text-muted-foreground border-muted',
+  cancelled: 'bg-destructive/10 text-destructive border-destructive/20',
   paid: 'bg-success/10 text-success border-success/20',
   enrolled: 'bg-success/10 text-success border-success/20',
   graduated: 'bg-success/10 text-success border-success/20',
