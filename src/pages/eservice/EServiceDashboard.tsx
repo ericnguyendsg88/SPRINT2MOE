@@ -222,7 +222,7 @@ export default function EServiceDashboard() {
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     biannually: 'Bi-annually',
-    yearly: 'Yearly',
+    yearly: 'Annually',
   };
 
   // Default column definitions

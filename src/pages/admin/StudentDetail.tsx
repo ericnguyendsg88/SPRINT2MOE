@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, Pencil, HelpCircle } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, ArrowUp, Pencil, HelpCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -9,8 +9,10 @@ import { useAccountHolder, useUpdateAccountHolder } from '@/hooks/useAccountHold
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseCharges } from '@/hooks/useCourseCharges';
+import { useTransactionsByAccount } from '@/hooks/useTransactions';
 import { usePageLayout, SectionSize, ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
 import { formatDate } from '@/lib/dateUtils';
+import { formatTime } from '@/lib/dateUtils';
 import { Input } from '@/components/ui/input';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
@@ -53,7 +55,7 @@ import {
 } from '@/components/ui/tooltip';
 
 // Section IDs for drag-and-drop
-const SECTION_IDS = ['stats', 'student-info', 'enrolled-courses', 'outstanding-fees', 'payment-history'];
+const SECTION_IDS = ['stats', 'student-info', 'enrolled-courses', 'outstanding-fees', 'top-up-history', 'payment-history'];
 
 export default function StudentDetail() {
   const { accountId } = useParams();
@@ -64,6 +66,7 @@ export default function StudentDetail() {
   const { data: enrollments = [] } = useEnrollments();
   const { data: courses = [] } = useCourses();
   const { data: courseCharges = [] } = useCourseCharges();
+  const { data: transactions = [] } = useTransactionsByAccount(accountId || '');
   const updateAccountMutation = useUpdateAccountHolder();
 
   // Page layout for drag-and-drop
@@ -95,6 +98,18 @@ export default function StudentDetail() {
   const getSectionSize = (sectionId: string): SectionSize => {
     const item = layout.find(l => l.id === sectionId);
     return item?.size || 'full';
+  };
+
+  // Helper function to calculate age
+  const calculateAge = (dateOfBirth: string) => {
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   // Edit dialog state
@@ -223,6 +238,10 @@ export default function StudentDetail() {
       
       const nextPaymentDate = calculateNextPaymentDate(e.enrollment_date, course.billing_cycle);
       
+      // Determine payment type based on billing cycle
+      const isOneTime = !course.billing_cycle || course.billing_cycle === 'one_time';
+      const paymentType = isOneTime ? 'One-Time' : 'Recurring';
+      
       return {
         id: e.id,
         courseId: course.id,
@@ -230,6 +249,7 @@ export default function StudentDetail() {
         provider: course.provider,
         fee: Number(course.fee),
         billingCycle: course.billing_cycle,
+        paymentType,
         enrollmentDate: e.enrollment_date,
         nextPaymentDate,
         paymentStatus,
@@ -243,12 +263,16 @@ export default function StudentDetail() {
       provider: string;
       fee: number;
       billingCycle: string;
+      paymentType: string;
       enrollmentDate: string;
       nextPaymentDate: Date;
       paymentStatus: 'outstanding' | 'fully_paid' | 'scheduled';
       totalFee: number;
       totalCollected: number;
     }[];
+
+    // Filter top-up transactions
+    const topUpTransactions = transactions.filter(t => t.type === 'top_up');
 
     return {
       age,
@@ -257,8 +281,9 @@ export default function StudentDetail() {
       clearCharges,
       totalOutstanding,
       enrolledCourses,
+      topUpTransactions,
     };
-  }, [account, accountId, courseCharges, enrollments, courses]);
+  }, [account, accountId, courseCharges, enrollments, courses, transactions]);
 
   if (loadingAccount) {
     return (
@@ -280,7 +305,11 @@ export default function StudentDetail() {
     );
   }
 
-  const { age, outstandingCharges, clearCharges, totalOutstanding, enrolledCourses, studentCharges } = computedData;
+  const { age, outstandingCharges, clearCharges, totalOutstanding, enrolledCourses, studentCharges, topUpTransactions } = computedData;
+
+  // Determine if account is active (inactive if age > 30 OR manually set to inactive)
+  // Use account.status if it exists, otherwise default to age-based calculation
+  const accountActiveStatus = account.status === 'closed' ? 'inactive' : (account.status || (calculateAge(account.date_of_birth) <= 30 ? 'active' : 'inactive'));
 
   // Education level labels
   const educationLevelLabels: Record<string, string> = {
@@ -295,6 +324,14 @@ export default function StudentDetail() {
     sc: 'SC (Singapore Citizen)',
     spr: 'SPR (Singapore Permanent Resident)',
     non_resident: 'Non-Resident',
+  };
+
+  const handleToggleActiveStatus = async () => {
+    const newStatus = accountActiveStatus === 'active' ? 'inactive' : 'active';
+    await updateAccountMutation.mutateAsync({
+      id: account.id,
+      status: newStatus,
+    });
   };
 
   const handleCloseAccount = async () => {
@@ -318,6 +355,15 @@ export default function StudentDetail() {
       )
     },
     {
+      key: 'paymentType',
+      header: 'Payment Type',
+      render: (item: typeof enrolledCourses[0]) => (
+        <span className="text-muted-foreground">
+          {item.paymentType}
+        </span>
+      )
+    },
+    {
       key: 'billingCycle',
       header: 'Billing Cycle',
       render: (item: typeof enrolledCourses[0]) => {
@@ -325,8 +371,13 @@ export default function StudentDetail() {
           monthly: 'Monthly',
           quarterly: 'Quarterly',
           biannually: 'Bi-annually',
-          yearly: 'Yearly',
+          yearly: 'Annually',
         };
+        // Display '-' for one-time payments since billing cycle is not applicable
+        const isOneTime = !item.billingCycle || item.billingCycle === 'one_time';
+        if (isOneTime) {
+          return <span className="text-muted-foreground">-</span>;
+        }
         return (
           <span className="text-muted-foreground">
             {cycleLabels[item.billingCycle] || item.billingCycle}
@@ -473,9 +524,10 @@ export default function StudentDetail() {
       key: 'due_date',
       header: 'Paid Date',
       render: (item: typeof studentCharges[0]) => (
-        <span className="text-muted-foreground">
-          {formatDate(item.paid_date || item.due_date)}
-        </span>
+        <div>
+          <div>{formatDate(item.paid_date || item.due_date)}</div>
+          <div className="text-xs text-muted-foreground">{item.paid_date && formatTime(item.paid_date)}</div>
+        </div>
       )
     },
     {
@@ -516,6 +568,7 @@ export default function StudentDetail() {
   const courseAvailableFields: AvailableField[] = [
     { key: 'courseName', label: 'Course Name', type: 'string' },
     { key: 'provider', label: 'Provider', type: 'string' },
+    { key: 'paymentType', label: 'Payment Type', type: 'string' },
     { key: 'billingCycle', label: 'Billing Cycle', type: 'string' },
     { key: 'fee', label: 'Course Fee', type: 'number' },
     { key: 'totalFee', label: 'Total Fee', type: 'number' },
@@ -833,6 +886,63 @@ export default function StudentDetail() {
           </ResizableSection>
         );
 
+      case 'top-up-history':
+        return (
+          <ResizableSection 
+            key={sectionId} 
+            id={sectionId} 
+            isEditMode={isEditMode}
+            size={sectionSize}
+            onSizeChange={(size) => updateSectionSize(sectionId, size)}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowUp className="h-5 w-5 text-success" />
+                  Top Up History ({topUpTransactions.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DataTable
+                  data={topUpTransactions}
+                  columns={[
+                    {
+                      key: 'created_at',
+                      header: 'Date & Time',
+                      render: (transaction) => (
+                        <div>
+                          <div>{formatDate(transaction.created_at)}</div>
+                          <div className="text-xs text-muted-foreground">{formatTime(transaction.created_at)}</div>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'amount',
+                      header: 'Amount',
+                      render: (transaction) => (
+                        <span className="font-semibold text-success">
+                          +${Number(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: 'reference',
+                      header: 'Reference',
+                      render: (transaction) => transaction.reference || '—',
+                    },
+                    {
+                      key: 'description',
+                      header: 'Description',
+                      render: (transaction) => transaction.description || '—',
+                    },
+                  ]}
+                  emptyMessage="No top-up history"
+                />
+              </CardContent>
+            </Card>
+          </ResizableSection>
+        );
+
       case 'payment-history':
         return (
           <ResizableSection 
@@ -904,7 +1014,16 @@ export default function StudentDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{account.name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">{account.name}</h1>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                accountActiveStatus === 'active' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {accountActiveStatus === 'active' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
             <p className="text-muted-foreground">{account.nric}</p>
           </div>
         </div>
@@ -915,19 +1034,47 @@ export default function StudentDetail() {
             Edit
           </Button>
           
-          {account.status !== 'closed' && (
+          {account.status !== 'closed' && accountActiveStatus === 'inactive' && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Close Account
+                <Button variant="default" className="bg-success hover:bg-success/90">
+                  <Check className="h-4 w-4 mr-2" />
+                  Reactivate Account
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Close Student Account?</AlertDialogTitle>
+                  <AlertDialogTitle>Reactivate Student Account?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will close the account for {account.name}. The account will be marked as closed and the student will no longer be able to access the e-service portal or make payments.
+                    This will reactivate the account for {account.name}. The student will be able to access the e-service portal and make payments again.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleToggleActiveStatus}
+                    className="bg-success text-white hover:bg-success/90"
+                  >
+                    Reactivate
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+
+          {account.status !== 'closed' && accountActiveStatus === 'active' && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Deactivate Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Deactivate Student Account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will deactivate the account for {account.name}. The account will remain in the system but the student will not be able to access the e-service portal or make payments.
                     {totalOutstanding > 0 && (
                       <span className="block mt-2 text-warning font-medium">
                         Warning: This student has ${totalOutstanding.toFixed(2)} in outstanding fees.
@@ -938,10 +1085,10 @@ export default function StudentDetail() {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction 
-                    onClick={handleCloseAccount}
+                    onClick={handleToggleActiveStatus}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Close Account
+                    Deactivate
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

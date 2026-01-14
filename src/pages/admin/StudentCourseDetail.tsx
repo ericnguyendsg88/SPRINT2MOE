@@ -18,7 +18,7 @@ const billingCycleLabels: Record<BillingCycle, string> = {
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   biannually: 'Bi-annually',
-  yearly: 'Yearly',
+  yearly: 'Annually',
 };
 
 export default function StudentCourseDetail() {

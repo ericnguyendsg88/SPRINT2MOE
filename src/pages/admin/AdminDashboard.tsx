@@ -418,12 +418,6 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-1">Overview of education account system</p>
         </div>
-        <Link to="/admin/accounts">
-          <Button variant="accent">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Create New Account
-          </Button>
-        </Link>
       </div>
 
       {/* Sortable Sections */}

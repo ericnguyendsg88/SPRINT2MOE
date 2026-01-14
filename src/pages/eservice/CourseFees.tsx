@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+  import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Wallet, AlertCircle, CheckCircle, BookOpen, GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -380,7 +380,28 @@ export default function CourseFees() {
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     biannually: 'Bi-annually',
-    yearly: 'Yearly',
+    yearly: 'Annually',
+  };
+
+  // Helper to format payment method display
+  const formatPaymentMethod = (method: string | null): string => {
+    if (!method) return '—';
+    
+    const methodLabels: Record<string, string> = {
+      'account_balance': 'Account Balance',
+      'credit_card': 'Credit Card',
+      'paynow': 'PayNow',
+      'bank_transfer': 'Bank Transfer',
+    };
+    
+    // Check if it's a combined payment (format: account_balance+other_method)
+    if (method.includes('+')) {
+      const methods = method.split('+');
+      const formattedMethods = methods.map(m => methodLabels[m] || m.replace('_', ' '));
+      return formattedMethods.join(' and ');
+    }
+    
+    return methodLabels[method] || method.replace('_', ' ');
   };
 
   // Helper to get the last day of the month for due date
@@ -619,8 +640,8 @@ export default function CourseFees() {
       key: 'paymentMethod', 
       header: 'Method',
       render: (item: CourseCharge) => (
-        <span className="text-xs text-muted-foreground capitalize">
-          {item.payment_method?.replace('_', ' ') || '—'}
+        <span className="text-xs text-muted-foreground">
+          {formatPaymentMethod(item.payment_method)}
         </span>
       )
     },
@@ -965,40 +986,42 @@ export default function CourseFees() {
                 </div>
               )}
 
-              {remainingAmount > 0 && (
-                <>
-                  <div className="border-t border-border pt-4">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Remaining amount: <span className="font-semibold text-foreground">${remainingAmount.toFixed(2)}</span>
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium">External Payment</p>
+                  {remainingAmount > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Remaining: <span className="font-semibold text-foreground">${remainingAmount.toFixed(2)}</span>
                     </p>
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>External Payment Method</Label>
-                        <Select value={externalMethod} onValueChange={setExternalMethod}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="credit_card">Credit/Debit Card</SelectItem>
-                            <SelectItem value="paynow">PayNow</SelectItem>
-                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>External Amount</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={externalAmount}
-                          onChange={(e) => setExternalAmount(e.target.value)}
-                        />
-                      </div>
-                    </div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>External Payment Method</Label>
+                    <Select value={externalMethod} onValueChange={setExternalMethod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="credit_card">Credit/Debit Card</SelectItem>
+                        <SelectItem value="paynow">PayNow</SelectItem>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </>
-              )}
+                  <div className="space-y-2">
+                    <Label>External Amount</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={externalAmount}
+                      onChange={(e) => setExternalAmount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-lg bg-muted p-4">
