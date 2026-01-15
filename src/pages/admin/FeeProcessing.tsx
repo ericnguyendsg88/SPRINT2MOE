@@ -38,7 +38,7 @@ export default function FeeProcessing() {
   } = usePageBuilder('fee-processing', SECTION_IDS);
 
   const outstandingCharges = courseCharges.filter(c => c.status === 'outstanding');
-  const overdueCharges = courseCharges.filter(c => c.status === 'overdue');
+  const overdueCharges = courseCharges.filter(c => c.status === 'outstanding');
   const clearCharges = courseCharges.filter(c => c.status === 'clear');
   
   const totalOutstanding = outstandingCharges.reduce((sum, c) => sum + Number(c.amount), 0);
@@ -109,7 +109,7 @@ export default function FeeProcessing() {
       key: 'status', 
       header: chargeColumnsConfig.find(c => c.key === 'status')?.header || 'Payment Status',
       render: (item: typeof courseCharges[0]) => (
-        <StatusBadge status={item.status === 'overdue' ? 'outstanding' : item.status} />
+        <StatusBadge status={item.status} />
       )
     },
     { 
@@ -167,7 +167,7 @@ export default function FeeProcessing() {
               variant="warning"
             />
             <StatCard
-              title="Overdue Fees"
+              title="Unpaid Fees"
               value={`$${totalOverdue.toFixed(2)}`}
               subtitle={`${overdueCharges.length} charges`}
               icon={AlertTriangle}

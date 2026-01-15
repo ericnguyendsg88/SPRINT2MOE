@@ -147,6 +147,7 @@ export type Database = {
       courses: {
         Row: {
           billing_cycle: Database["public"]["Enums"]["billing_cycle"]
+          course_code: string | null
           course_run_end: string | null
           course_run_start: string | null
           created_at: string
@@ -158,12 +159,14 @@ export type Database = {
           mode_of_training: string | null
           name: string
           provider: string
+          provider_id: string | null
           register_by: string | null
           status: Database["public"]["Enums"]["course_status"]
           updated_at: string
         }
         Insert: {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
+          course_code?: string | null
           course_run_end?: string | null
           course_run_start?: string | null
           created_at?: string
@@ -175,12 +178,14 @@ export type Database = {
           mode_of_training?: string | null
           name: string
           provider: string
+          provider_id?: string | null
           register_by?: string | null
           status?: Database["public"]["Enums"]["course_status"]
           updated_at?: string
         }
         Update: {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
+          course_code?: string | null
           course_run_end?: string | null
           course_run_start?: string | null
           created_at?: string
@@ -192,8 +197,41 @@ export type Database = {
           mode_of_training?: string | null
           name?: string
           provider?: string
+          provider_id?: string | null
           register_by?: string | null
           status?: Database["public"]["Enums"]["course_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      providers: {
+        Row: {
+          id: string
+          name: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
@@ -480,7 +518,6 @@ export type Database = {
         | "processing"
         | "completed"
         | "failed"
-        | "cancelled"
       top_up_schedule_type: "batch" | "individual"
       transaction_status: "completed" | "pending" | "failed"
       transaction_type: "top_up" | "course_fee" | "payment" | "refund"

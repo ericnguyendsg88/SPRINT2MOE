@@ -82,6 +82,7 @@ export default function CourseDetail() {
   const [isRemoveMode, setIsRemoveMode] = useState(false);
   const [enrolledSearchQuery, setEnrolledSearchQuery] = useState('');
   const [studentToRemove, setStudentToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<string[]>([]);
 
   const { data: course, isLoading } = useCourse(courseId || '');
   const { data: enrollments = [] } = useEnrollments();
@@ -364,7 +365,49 @@ export default function CourseDetail() {
     setStudentToRemove(null);
   };
 
+  const handleBulkRemoveStudents = async () => {
+    for (const enrollmentId of selectedEnrollmentIds) {
+      await deleteEnrollmentMutation.mutateAsync(enrollmentId);
+    }
+    setSelectedEnrollmentIds([]);
+    setStudentToRemove(null);
+  };
+
+  const toggleEnrollmentSelection = (enrollmentId: string) => {
+    setSelectedEnrollmentIds(prev => 
+      prev.includes(enrollmentId) 
+        ? prev.filter(id => id !== enrollmentId)
+        : [...prev, enrollmentId]
+    );
+  };
+
+  const toggleSelectAllEnrollments = () => {
+    if (selectedEnrollmentIds.length === filteredEnrolledStudents.length) {
+      setSelectedEnrollmentIds([]);
+    } else {
+      setSelectedEnrollmentIds(filteredEnrolledStudents.map(s => s.id));
+    }
+  };
+
   const studentColumns = [
+    ...(isRemoveMode ? [{
+      key: 'select',
+      header: (
+        <Checkbox
+          checked={selectedEnrollmentIds.length === filteredEnrolledStudents.length && filteredEnrolledStudents.length > 0}
+          onCheckedChange={toggleSelectAllEnrollments}
+          aria-label="Select all"
+        />
+      ),
+      render: (item: typeof enrolledStudents[0]) => (
+        <Checkbox
+          checked={selectedEnrollmentIds.includes(item.id)}
+          onCheckedChange={() => toggleEnrollmentSelection(item.id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select ${item.name}`}
+        />
+      )
+    }] : []),
     {
       key: 'name',
       header: 'Student Name',
@@ -388,24 +431,6 @@ export default function CourseDetail() {
         </span>
       )
     },
-    ...(isRemoveMode ? [{
-      key: 'actions',
-      header: '',
-      render: (item: typeof enrolledStudents[0]) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={(e) => {
-            e.stopPropagation();
-            setStudentToRemove({ id: item.id, name: item.name });
-          }}
-        >
-          <X className="h-4 w-4 mr-1" />
-          Remove
-        </Button>
-      )
-    }] : []),
   ];
 
   const handleStudentClick = (student: typeof enrolledStudents[0]) => {
@@ -473,7 +498,14 @@ export default function CourseDetail() {
               </Button>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-foreground">{course.name}</h1>
-                <p className="text-muted-foreground">{course.provider}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {course.course_code && (
+                    <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {course.course_code}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">{course.provider}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <AlertDialog>
@@ -786,13 +818,38 @@ export default function CourseDetail() {
                 <div className="flex items-center justify-between">
                   <CardTitle>Enrolled Students</CardTitle>
                   <div className="flex items-center gap-2">
+                    {isRemoveMode && selectedEnrollmentIds.length > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setStudentToRemove({ 
+                          id: 'bulk', 
+                          name: `${selectedEnrollmentIds.length} student${selectedEnrollmentIds.length > 1 ? 's' : ''}` 
+                        })}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove ({selectedEnrollmentIds.length})
+                      </Button>
+                    )}
                     <Button
-                      variant={isRemoveMode ? "destructive" : "outline"}
+                      variant={isRemoveMode ? "outline" : "outline"}
                       size="sm"
-                      onClick={() => setIsRemoveMode(!isRemoveMode)}
+                      onClick={() => {
+                        setIsRemoveMode(!isRemoveMode);
+                        setSelectedEnrollmentIds([]);
+                      }}
                     >
-                      <UserMinus className="h-4 w-4 mr-2" />
-                      {isRemoveMode ? 'Done' : 'Remove Student'}
+                      {isRemoveMode ? (
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel
+                        </>
+                      ) : (
+                        <>
+                          <UserMinus className="h-4 w-4 mr-2" />
+                          Remove Students
+                        </>
+                      )}
                     </Button>
                     <Dialog open={isAddStudentOpen} onOpenChange={(open) => {
                       if (course.status === 'inactive') return;
@@ -1009,16 +1066,31 @@ export default function CourseDetail() {
             <AlertDialog open={!!studentToRemove} onOpenChange={(open) => !open && setStudentToRemove(null)}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Remove Student</AlertDialogTitle>
+                  <AlertDialogTitle>Remove {studentToRemove?.id === 'bulk' ? 'Students' : 'Student'}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to remove <strong>{studentToRemove?.name}</strong> from this course? 
-                    This will remove the enrollment record but keep any existing payment history.
+                    {studentToRemove?.id === 'bulk' ? (
+                      <>
+                        Are you sure you want to remove <strong>{studentToRemove.name}</strong> from this course? 
+                        This will remove the enrollment records but keep any existing payment history.
+                      </>
+                    ) : (
+                      <>
+                        Are you sure you want to remove <strong>{studentToRemove?.name}</strong> from this course? 
+                        This will remove the enrollment record but keep any existing payment history.
+                      </>
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel onClick={() => setStudentToRemove(null)}>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => studentToRemove && handleRemoveStudent(studentToRemove.id)}
+                    onClick={() => {
+                      if (studentToRemove?.id === 'bulk') {
+                        handleBulkRemoveStudents();
+                      } else if (studentToRemove) {
+                        handleRemoveStudent(studentToRemove.id);
+                      }
+                    }}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     {deleteEnrollmentMutation.isPending ? 'Removing...' : 'Remove'}

@@ -545,7 +545,7 @@ export default function AccountManagement() {
                           placeholder="Auto-filled from NRIC verification" 
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          disabled={true}
+                          disabled={!nricDataRetrieved}
                         />
                       </div>
                     </div>
@@ -557,13 +557,13 @@ export default function AccountManagement() {
                         placeholder="Auto-filled from NRIC verification" 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        disabled={true}
+                        disabled={!nricDataRetrieved}
                       />
                     </div>
 
                     <div className="grid gap-2">
                       <Label htmlFor="educationLevel">Education Level</Label>
-                      <Select value={educationLevel} onValueChange={setEducationLevel}>
+                      <Select value={educationLevel} onValueChange={setEducationLevel} disabled={!nricDataRetrieved}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
@@ -584,7 +584,7 @@ export default function AccountManagement() {
                         placeholder="Auto-filled from NRIC verification" 
                         value={residentialAddress}
                         onChange={(e) => setResidentialAddress(e.target.value)}
-                        disabled={true}
+                        disabled={!nricDataRetrieved}
                       />
                     </div>
 
@@ -605,7 +605,7 @@ export default function AccountManagement() {
                         placeholder="Auto-filled from NRIC verification" 
                         value={mailingAddress}
                         onChange={(e) => setMailingAddress(e.target.value)}
-                        disabled={true}
+                        disabled={!nricDataRetrieved}
                       />
                     </div>
                   </div>
@@ -875,12 +875,6 @@ export default function AccountManagement() {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex justify-end mt-4">
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
           </ResizableSection>
         );
 

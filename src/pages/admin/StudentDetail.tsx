@@ -173,7 +173,7 @@ export default function StudentDetail() {
 
     // Get student's course charges
     const studentCharges = courseCharges.filter(c => c.account_id === accountId);
-    const outstandingCharges = studentCharges.filter(c => c.status === 'outstanding' || c.status === 'overdue');
+    const outstandingCharges = studentCharges.filter(c => c.status === 'outstanding');
     const clearCharges = studentCharges.filter(c => c.status === 'clear');
     const totalOutstanding = outstandingCharges.reduce((sum, c) => sum + Number(c.amount), 0);
 

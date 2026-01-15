@@ -126,7 +126,7 @@ export default function StudentCourseDetail() {
       key: 'status',
       header: 'Status',
       render: (item: typeof courseCharges[0]) => (
-        <StatusBadge status={item.status === 'overdue' ? 'outstanding' : item.status} />
+        <StatusBadge status={item.status} />
       )
     },
   ];

@@ -325,6 +325,13 @@ export default function AdminDashboard() {
                     )
                   },
                   { 
+                    key: 'created_by', 
+                    header: 'Created by',
+                    render: () => (
+                      <span className="text-sm text-muted-foreground">Admin</span>
+                    )
+                  },
+                  { 
                     key: 'created_at', 
                     header: 'Created',
                     render: (item: typeof accountHolders[0]) => (
