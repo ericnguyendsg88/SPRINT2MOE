@@ -27,7 +27,7 @@ import { SectionAdder } from '@/components/editor/SectionAdder';
 import { CustomSectionRenderer } from '@/components/editor/CustomSectionRenderer';
 import { ColumnEditor } from '@/components/editor/ColumnEditor';
 import { ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const SECTION_IDS = ['balance-card', 'stats', 'transactions'];
 
@@ -299,7 +299,7 @@ export default function AccountBalance() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Fees Paid</p>
-                  <p className="text-2xl font-bold text-foreground">${totalFeesPaid.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-foreground">${formatCurrency(totalFeesPaid)}</p>
                   <p className="text-xs text-muted-foreground">Course fees deducted</p>
                 </div>
               </div>

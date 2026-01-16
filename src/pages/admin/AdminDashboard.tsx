@@ -20,6 +20,7 @@ import { CustomSectionRenderer } from '@/components/editor/CustomSectionRenderer
 import { ColumnEditor, AvailableField } from '@/components/editor/ColumnEditor';
 import { ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
 import { formatDate } from '@/lib/dateUtils';
+import { formatCurrency } from '@/lib/utils';
 
 const SECTION_IDS = ['topup-tracking', 'recent-activity'];
 
@@ -126,7 +127,7 @@ export default function AdminDashboard() {
       key: 'amount', 
       header: batchColumns.find(c => c.key === 'amount')?.header || 'Amount',
       render: (item: typeof topUpSchedules[0]) => (
-        <span className="font-semibold text-success">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+        <span className="font-semibold text-success">${formatCurrency(Number(item.amount))}</span>
       )
     },
     { 
@@ -167,7 +168,7 @@ export default function AdminDashboard() {
       key: 'amount', 
       header: individualColumns.find(c => c.key === 'amount')?.header || 'Amount',
       render: (item: typeof topUpSchedules[0]) => (
-        <span className="font-semibold text-success">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+        <span className="font-semibold text-success">${formatCurrency(Number(item.amount))}</span>
       )
     },
     { 

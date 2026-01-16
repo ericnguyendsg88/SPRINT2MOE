@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -1297,7 +1298,7 @@ export default function CourseManagement() {
                           <TableCell className="text-foreground">{paymentType}</TableCell>
                           <TableCell className="text-muted-foreground">{billingCycleDisplay}</TableCell>
                           <TableCell className="font-semibold text-foreground">
-                            ${Number(course.fee).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            ${formatCurrency(Number(course.fee))}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {course.mode_of_training ? modeLabels[course.mode_of_training] || course.mode_of_training : '—'}

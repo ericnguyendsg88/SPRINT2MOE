@@ -11,6 +11,7 @@ import { useAccountHolders } from '@/hooks/useAccountHolders';
 import { useCourseCharges, useCreateCourseCharge } from '@/hooks/useCourseCharges';
 import { formatDate } from '@/lib/dateUtils';
 import { calculateProratedFee, getProratingInfo } from '@/lib/billingUtils';
+import { formatCurrency } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -333,26 +334,26 @@ export default function CourseStudents() {
                       <>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Full {proRateInfo.billingPeriodLabel} fee:</span>
-                          <span className="line-through text-muted-foreground">${proRateInfo.fullFee.toFixed(2)}</span>
+                          <span className="line-through text-muted-foreground">${formatCurrency(proRateInfo.fullFee)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Pro-rated ({proRateInfo.daysRemaining} of {proRateInfo.totalDays} days):
                           </span>
-                          <span className="font-semibold text-foreground">${proRateInfo.proratedFee.toFixed(2)}</span>
+                          <span className="font-semibold text-foreground">${formatCurrency(proRateInfo.proratedFee)}</span>
                         </div>
                         <div className="text-xs text-success mt-1">
-                          Student saves ${proRateInfo.savingsAmount.toFixed(2)} this {proRateInfo.billingPeriodLabel}
+                          Student saves ${formatCurrency(proRateInfo.savingsAmount)} this {proRateInfo.billingPeriodLabel}
                         </div>
                       </>
                     ) : (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Amount to charge:</span>
-                        <span className="font-semibold text-foreground">${proRateInfo.fullFee.toFixed(2)}</span>
+                        <span className="font-semibold text-foreground">${formatCurrency(proRateInfo.fullFee)}</span>
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground pt-1 border-t border-border">
-                      Subsequent {proRateInfo.billingPeriodLabel}s will be charged at the full rate of ${course.fee.toFixed(2)}
+                      Subsequent {proRateInfo.billingPeriodLabel}s will be charged at the full rate of ${formatCurrency(course.fee)}
                     </p>
                   </div>
                 );
@@ -426,7 +427,7 @@ export default function CourseStudents() {
                   <TableCell className="text-right">
                     {item.totalOwed > 0 ? (
                       <span className="font-semibold text-destructive">
-                        ${item.totalOwed.toFixed(2)}
+                        ${formatCurrency(item.totalOwed)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>

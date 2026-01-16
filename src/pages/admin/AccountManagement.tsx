@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -966,7 +967,7 @@ export default function AccountManagement() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{account.nric}</TableCell>
                           <TableCell className="text-foreground">{age}</TableCell>
-                          <TableCell className="font-semibold text-foreground">${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="font-semibold text-foreground">${formatCurrency(Number(account.balance))}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {account.education_level ? educationLevelLabels[account.education_level] || account.education_level : '-'}
                           </TableCell>

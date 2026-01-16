@@ -14,6 +14,7 @@ import { SectionAdder } from '@/components/editor/SectionAdder';
 import { CustomSectionRenderer } from '@/components/editor/CustomSectionRenderer';
 import { ColumnEditor } from '@/components/editor/ColumnEditor';
 import { ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
+import { formatCurrency } from '@/lib/utils';
 
 const SECTION_IDS = ['stats', 'info', 'charges-table'];
 
@@ -161,28 +162,28 @@ export default function FeeProcessing() {
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               title="Outstanding Fees"
-              value={`$${totalOutstanding.toFixed(2)}`}
+              value={`$${formatCurrency(totalOutstanding)}`}
               subtitle={`${outstandingCharges.length} charges`}
               icon={Clock}
               variant="warning"
             />
             <StatCard
               title="Unpaid Fees"
-              value={`$${totalOverdue.toFixed(2)}`}
+              value={`$${formatCurrency(totalOverdue)}`}
               subtitle={`${overdueCharges.length} charges`}
               icon={AlertTriangle}
               variant="default"
             />
             <StatCard
               title="Collected This Month"
-              value={`$${clearCharges.reduce((sum, c) => sum + Number(c.amount), 0).toFixed(2)}`}
+              value={`$${formatCurrency(clearCharges.reduce((sum, c) => sum + Number(c.amount), 0))}`}
               subtitle={`${clearCharges.length} payments`}
               icon={CheckCircle}
               variant="success"
             />
             <StatCard
               title="Total Due"
-              value={`$${(totalOutstanding + totalOverdue).toFixed(2)}`}
+              value={`$${formatCurrency(totalOutstanding + totalOverdue)}`}
               subtitle="To be collected"
               icon={CreditCard}
               variant="primary"
