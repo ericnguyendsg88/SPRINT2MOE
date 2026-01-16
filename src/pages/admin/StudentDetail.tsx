@@ -13,6 +13,7 @@ import { useTransactionsByAccount } from '@/hooks/useTransactions';
 import { usePageLayout, SectionSize, ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
 import { formatDate } from '@/lib/dateUtils';
 import { formatTime } from '@/lib/dateUtils';
+import { formatCurrency } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
@@ -390,7 +391,7 @@ export default function StudentDetail() {
       header: 'Total Fee',
       render: (item: typeof enrolledCourses[0]) => (
         <span className="font-semibold text-foreground">
-          ${item.totalFee.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          ${formatCurrency(item.totalFee)}
         </span>
       )
     },
@@ -474,7 +475,7 @@ export default function StudentDetail() {
       key: 'amount',
       header: 'Amount',
       render: (item: typeof studentCharges[0]) => (
-        <span className="font-semibold text-foreground">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+        <span className="font-semibold text-foreground">${formatCurrency(Number(item.amount))}</span>
       )
     },
     {
