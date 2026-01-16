@@ -427,13 +427,9 @@ export default function TopUpManagement() {
           status: 'completed',
         });
         
-<<<<<<< HEAD
         toast.success(`$${formatCurrency(amount, 0)} credited to ${account.name}'s account`, {
           description: `Reference ID: ${referenceId}`,
         });
-=======
-        toast.success(`$${formatCurrency(amount)} credited to ${account.name}'s account`);
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
       } else {
         toast.success('Top-up scheduled successfully');
       }
@@ -1389,43 +1385,9 @@ export default function TopUpManagement() {
                     <div className="bg-muted/50 p-3 rounded-lg mb-2">
                       <div className="text-sm font-medium">{account.name}</div>
                       <div className="text-xs text-muted-foreground">{account.nric}</div>
-<<<<<<< HEAD
                     </div>
                   );
                 })()}
-=======
-                      <div className="text-xs text-muted-foreground">Balance: ${formatCurrency(Number(account.balance))}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="grid gap-2">
-              <Label>Top-up Amount ($)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">S$</span>
-                <Input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={topUpAmount}
-                  onChange={(e) => setTopUpAmount(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="individual-execute-now"
-                checked={executeNow}
-                onCheckedChange={(checked) => setExecuteNow(checked === true)}
-              />
-              <Label htmlFor="individual-execute-now">Execute immediately</Label>
-            </div>
-            {!executeNow && (
-              <div className="grid grid-cols-2 gap-3">
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                 <div className="grid gap-2">
                   <Label>Description <span className="text-destructive">*</span></Label>
                   <Input

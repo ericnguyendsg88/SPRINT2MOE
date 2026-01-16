@@ -391,11 +391,7 @@ export default function StudentDetail() {
       header: 'Total Fee',
       render: (item: typeof enrolledCourses[0]) => (
         <span className="font-semibold text-foreground">
-<<<<<<< HEAD
           ${item.totalFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-=======
-          ${formatCurrency(item.totalFee)}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
         </span>
       )
     },
@@ -479,11 +475,7 @@ export default function StudentDetail() {
       key: 'amount',
       header: 'Amount',
       render: (item: typeof studentCharges[0]) => (
-<<<<<<< HEAD
         <span className="font-semibold text-foreground">${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-=======
-        <span className="font-semibold text-foreground">${formatCurrency(Number(item.amount))}</span>
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
       )
     },
     {

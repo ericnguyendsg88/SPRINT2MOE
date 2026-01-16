@@ -967,11 +967,7 @@ export default function AccountManagement() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">{account.nric}</TableCell>
                           <TableCell className="text-foreground">{age}</TableCell>
-<<<<<<< HEAD
                           <TableCell className="font-semibold text-foreground">${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</TableCell>
-=======
-                          <TableCell className="font-semibold text-foreground">${formatCurrency(Number(account.balance))}</TableCell>
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                           <TableCell className="text-muted-foreground">
                             {account.education_level ? educationLevelLabels[account.education_level] || account.education_level : '-'}
                           </TableCell>

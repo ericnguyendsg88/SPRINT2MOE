@@ -163,45 +163,28 @@ export default function FeeProcessing() {
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               title="Outstanding Fees"
-<<<<<<< HEAD
               value={`$${formatCurrency(totalOutstanding, 0)}`}
-=======
-              value={`$${formatCurrency(totalOutstanding)}`}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
               subtitle={`${outstandingCharges.length} charges`}
               icon={Clock}
               variant="warning"
             />
             <StatCard
-<<<<<<< HEAD
               title="Overdue Fees"
               value={`$${formatCurrency(totalOverdue, 0)}`}
-=======
-              title="Unpaid Fees"
-              value={`$${formatCurrency(totalOverdue)}`}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
               subtitle={`${overdueCharges.length} charges`}
               icon={AlertTriangle}
               variant="default"
             />
             <StatCard
               title="Collected This Month"
-<<<<<<< HEAD
               value={`$${formatCurrency(clearCharges.reduce((sum, c) => sum + Number(c.amount), 0), 0)}`}
-=======
-              value={`$${formatCurrency(clearCharges.reduce((sum, c) => sum + Number(c.amount), 0))}`}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
               subtitle={`${clearCharges.length} payments`}
               icon={CheckCircle}
               variant="success"
             />
             <StatCard
               title="Total Due"
-<<<<<<< HEAD
               value={`$${formatCurrency(totalOutstanding + totalOverdue, 0)}`}
-=======
-              value={`$${formatCurrency(totalOutstanding + totalOverdue)}`}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
               subtitle="To be collected"
               icon={CreditCard}
               variant="primary"

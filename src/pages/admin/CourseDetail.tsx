@@ -588,11 +588,7 @@ export default function CourseDetail() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Fee</p>
-<<<<<<< HEAD
                       <p className="text-2xl font-bold">${calculateCourseTotalFee().toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-=======
-                      <p className="text-2xl font-bold">${formatCurrency(calculateCourseTotalFee())}</p>
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                     </div>
                   </div>
                 </CardContent>
@@ -780,13 +776,8 @@ export default function CourseDetail() {
                         fee: {
                           icon: <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />,
                           value: getPaymentType() === 'One Time'
-<<<<<<< HEAD
                             ? `$${formatCurrency(Number(course.fee), 0)}`
                             : `$${formatCurrency(Number(course.fee), 0)} / ${billingCycleLabels[course.billing_cycle as BillingCycle]}`,
-=======
-                            ? `$${formatCurrency(Number(course.fee))}`
-                            : `$${formatCurrency(Number(course.fee))} / ${billingCycleLabels[course.billing_cycle as BillingCycle]}`,
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                         },
                       };
                       const config = fieldConfig[field.key];
@@ -1022,11 +1013,7 @@ export default function CourseDetail() {
                                 <p>Each student will be:</p>
                                 <ul className="list-disc list-inside mt-1 space-y-0.5">
                                   <li>Enrolled in the course with today's date</li>
-<<<<<<< HEAD
                                   <li>Charged the course fee of ${formatCurrency(Number(course.fee), 0)}</li>
-=======
-                                  <li>Charged the course fee of ${formatCurrency(Number(course.fee))}</li>
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                                 </ul>
                               </div>
                               

@@ -1308,11 +1308,7 @@ export default function CourseManagement() {
                           <TableCell className="text-foreground">{paymentType}</TableCell>
                           <TableCell className="text-muted-foreground">{billingCycleDisplay}</TableCell>
                           <TableCell className="font-semibold text-foreground">
-<<<<<<< HEAD
                             ${Number(course.fee).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-=======
-                            ${formatCurrency(Number(course.fee))}
->>>>>>> 785df4ae9f8bc1b93cd135d2c9890aa90cda1592
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {course.mode_of_training ? modeLabels[course.mode_of_training] || course.mode_of_training : '—'}
