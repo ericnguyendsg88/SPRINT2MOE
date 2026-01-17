@@ -434,7 +434,7 @@ export default function CourseDetail() {
         <span className="text-muted-foreground">
           {new Date(item.enrollmentDate).toLocaleDateString('en-GB', {
             day: '2-digit',
-            month: 'short',
+            month: '2-digit',
             year: 'numeric'
           })}
         </span>
@@ -783,13 +783,13 @@ export default function CourseDetail() {
                         course_start: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
                           value: course.course_run_start 
-                            ? new Date(course.course_run_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            ? new Date(course.course_run_start).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
                             : 'Not set',
                         },
                         course_end: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
                           value: course.course_run_end 
-                            ? new Date(course.course_run_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                            ? new Date(course.course_run_end).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
                             : 'Ongoing',
                         },
                         payment_type: {

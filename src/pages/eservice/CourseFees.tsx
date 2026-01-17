@@ -476,7 +476,7 @@ export default function CourseFees() {
     
     return billingDate.toLocaleDateString('en-GB', {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric'
     });
   };
@@ -539,7 +539,7 @@ export default function CourseFees() {
           <span className="text-muted-foreground">
             {billingDate.toLocaleDateString('en-GB', {
               day: '2-digit',
-              month: 'short',
+              month: '2-digit',
               year: 'numeric'
             })}
           </span>
@@ -561,7 +561,7 @@ export default function CourseFees() {
             <p className={`font-medium ${isOverdue ? 'text-destructive' : isUpcoming ? 'text-warning' : 'text-foreground'}`}>
               {dueDate.toLocaleDateString('en-GB', {
                 day: '2-digit',
-                month: 'short',
+                month: '2-digit',
                 year: 'numeric'
               })}
             </p>
@@ -631,7 +631,7 @@ export default function CourseFees() {
         <span className="text-muted-foreground">
           {item.paid_date ? new Date(item.paid_date).toLocaleDateString('en-GB', {
             day: '2-digit',
-            month: 'short',
+            month: '2-digit',
             year: 'numeric'
           }) : '—'}
         </span>
@@ -782,7 +782,7 @@ export default function CourseFees() {
                           <span className="text-muted-foreground">
                             {new Date(item.enrollment_date).toLocaleDateString('en-GB', {
                               day: '2-digit',
-                              month: 'short',
+                              month: '2-digit',
                               year: 'numeric'
                             })}
                           </span>

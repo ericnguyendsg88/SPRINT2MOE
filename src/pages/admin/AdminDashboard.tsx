@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Wallet, Calendar, ArrowUpRight, ArrowDownRight, CircleDollarSign, Users, User, UserPlus, Activity, GraduationCap } from 'lucide-react';
+import { Wallet, Calendar, ArrowUpRight, ArrowDownRight, CircleDollarSign, Users, User, UserPlus, Activity, GraduationCap, Search } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { StatCard } from '@/components/shared/StatCard';
 import { useTopUpSchedules } from '@/hooks/useTopUpSchedules';
 import { useCourseCharges } from '@/hooks/useCourseCharges';
@@ -32,11 +33,39 @@ import { formatCurrency } from '@/lib/utils';
 
 const SECTION_IDS = ['topup-tracking', 'recent-activity'];
 
+// Helper function to format time string to HH:MM AM/PM
+const formatTime = (timeString: string | Date): string => {
+  let date: Date;
+  
+  if (typeof timeString === 'string') {
+    // If it's a time string like "09:00" or "14:30"
+    if (timeString.includes(':') && !timeString.includes('T')) {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const min = parseInt(minutes);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${min.toString().padStart(2, '0')} ${ampm}`;
+    }
+    // If it's a full date string
+    date = new Date(timeString);
+  } else {
+    date = timeString;
+  }
+  
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [selectedBatchDetail, setSelectedBatchDetail] = useState<typeof topUpSchedules[0] | null>(null);
   const [showBatchDetailModal, setShowBatchDetailModal] = useState(false);
   const [showBatchEligibleAccounts, setShowBatchEligibleAccounts] = useState(false);
+  const [eligibleAccountsSearch, setEligibleAccountsSearch] = useState('');
   
   const { data: topUpSchedules = [], isLoading: loadingSchedules } = useTopUpSchedules();
   const { data: courseCharges = [], isLoading: loadingCharges } = useCourseCharges();
@@ -234,7 +263,7 @@ export default function AdminDashboard() {
         <div className="text-muted-foreground text-sm">
           <p>{formatDate(item.scheduled_date)}</p>
           {item.scheduled_time && (
-            <p className="text-xs">{item.scheduled_time}</p>
+            <p className="text-xs">{formatTime(item.scheduled_time)}</p>
           )}
         </div>
       )
@@ -275,7 +304,7 @@ export default function AdminDashboard() {
         <div className="text-muted-foreground text-sm">
           <p>{formatDate(item.scheduled_date)}</p>
           {item.scheduled_time && (
-            <p className="text-xs">{item.scheduled_time}</p>
+            <p className="text-xs">{formatTime(item.scheduled_time)}</p>
           )}
         </div>
       )
@@ -437,9 +466,10 @@ export default function AdminDashboard() {
                     key: 'created_at', 
                     header: 'Created',
                     render: (item: typeof accountHolders[0]) => (
-                      <span className="text-sm text-muted-foreground">
-                        {formatDate(item.created_at)}
-                      </span>
+                      <div className="text-sm text-muted-foreground">
+                        <p>{formatDate(item.created_at)}</p>
+                        <p className="text-xs">{formatTime(item.created_at)}</p>
+                      </div>
                     )
                   },
                 ]}
@@ -548,7 +578,7 @@ export default function AdminDashboard() {
                       <p className="font-medium text-foreground">
                         {new Date(selectedBatchDetail.scheduled_date).toLocaleDateString('en-GB', { 
                           day: '2-digit', 
-                          month: 'short', 
+                          month: '2-digit', 
                           year: 'numeric' 
                         })}
                       </p>
@@ -644,10 +674,8 @@ export default function AdminDashboard() {
                     <p className="font-medium text-foreground">
                       {new Date(selectedBatchDetail.executed_date).toLocaleDateString('en-GB', { 
                         day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        month: '2-digit', 
+                        year: 'numeric'
                       })}
                     </p>
                   </div>
@@ -681,14 +709,24 @@ export default function AdminDashboard() {
           </DialogHeader>
           <div className="mt-4">
             {selectedBatchDetail && (() => {
-              const eligibleAccounts = getEligibleAccountsForBatch(selectedBatchDetail.remarks);
-              return eligibleAccounts.length > 0 ? (
+              const allEligibleAccounts = getEligibleAccountsForBatch(selectedBatchDetail.remarks);
+              // Filter accounts based on search term
+              const eligibleAccounts = allEligibleAccounts.filter(account => {
+                if (!eligibleAccountsSearch) return true;
+                const searchLower = eligibleAccountsSearch.toLowerCase();
+                return (
+                  account.name.toLowerCase().includes(searchLower) ||
+                  account.nric.toLowerCase().includes(searchLower)
+                );
+              });
+              
+              return allEligibleAccounts.length > 0 ? (
                 <div className="space-y-3">
                   {/* Summary Card */}
                   <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg border">
                     <div>
                       <p className="text-xs text-muted-foreground">Total Accounts</p>
-                      <p className="text-2xl font-bold text-primary">{eligibleAccounts.length}</p>
+                      <p className="text-2xl font-bold text-primary">{allEligibleAccounts.length}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Amount per Account</p>
@@ -696,13 +734,32 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Total Disbursement</p>
-                      <p className="text-2xl font-bold text-success">S${formatCurrency(Number(selectedBatchDetail.amount) * eligibleAccounts.length)}</p>
+                      <p className="text-2xl font-bold text-success">S${formatCurrency(Number(selectedBatchDetail.amount) * allEligibleAccounts.length)}</p>
                     </div>
                   </div>
 
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by Name or NRIC..."
+                      value={eligibleAccountsSearch}
+                      onChange={(e) => setEligibleAccountsSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+
+                  {/* Results Count */}
+                  {eligibleAccountsSearch && (
+                    <div className="text-sm text-muted-foreground">
+                      Showing {eligibleAccounts.length} of {allEligibleAccounts.length} accounts
+                    </div>
+                  )}
+
                   {/* Accounts List */}
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
-                    {eligibleAccounts.map((account, index) => {
+                  {eligibleAccounts.length > 0 ? (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                      {eligibleAccounts.map((account, index) => {
                       const birthDate = new Date(account.date_of_birth);
                       const today = new Date();
                       const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
@@ -765,7 +822,13 @@ export default function AdminDashboard() {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg bg-muted/20">
+                      <p className="text-muted-foreground">No accounts match your search criteria</p>
+                      <p className="text-sm text-muted-foreground mt-1">Try adjusting your search term</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -775,7 +838,13 @@ export default function AdminDashboard() {
             })()}
           </div>
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowBatchEligibleAccounts(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowBatchEligibleAccounts(false);
+                setEligibleAccountsSearch('');
+              }}
+            >
               Close
             </Button>
           </div>

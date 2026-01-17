@@ -640,7 +640,7 @@ export default function AccountBalance() {
                       <p className="font-medium text-foreground">
                         {new Date(selectedTransaction.created_at).toLocaleDateString('en-GB', {
                           day: '2-digit',
-                          month: 'short',
+                          month: '2-digit',
                           year: 'numeric'
                         })}
                       </p>

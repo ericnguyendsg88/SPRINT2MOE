@@ -383,7 +383,7 @@ export default function EServiceCourseDetail() {
         const paidDate = item.paid_date ? new Date(item.paid_date) : new Date();
         return (
           <span className="font-medium text-foreground">
-            {paidDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+            {paidDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
           </span>
         );
       }

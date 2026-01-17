@@ -38,7 +38,7 @@ export function formatTime(date: Date | string | null | undefined): string {
 }
 
 /**
- * Format a date as DD MMM YYYY (e.g., 12 Jan 2026) - for more detailed displays
+ * Format a date as DD/MM/YYYY (e.g., 12/01/2026) - for more detailed displays
  */
 export function formatDateLong(date: Date | string | null | undefined): string {
   if (!date) return '—';
@@ -49,7 +49,7 @@ export function formatDateLong(date: Date | string | null | undefined): string {
   
   return d.toLocaleDateString('en-GB', {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric'
   });
 }

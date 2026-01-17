@@ -93,6 +93,7 @@ export default function TopUpManagement() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedScheduleDetail, setSelectedScheduleDetail] = useState<typeof topUpSchedules[0] | null>(null);
   const [showBatchEligibleAccounts, setShowBatchEligibleAccounts] = useState(false);
+  const [eligibleAccountsSearch, setEligibleAccountsSearch] = useState('');
 
   // Filter and sort state
   const [filterPeriod, setFilterPeriod] = useState<'all' | 'this-month' | 'last-month' | 'this-quarter' | 'half-year' | 'full-year' | 'next-year' | 'custom'>('all');
@@ -242,8 +243,8 @@ export default function TopUpManagement() {
   // Format date range for display
   const getDateRangeLabel = (): string => {
     const { start, end } = getDateRange();
-    const startStr = start.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const endStr = end.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const startStr = start.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const endStr = end.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     return `${startStr} - ${endStr}`;
   };
 
@@ -731,18 +732,14 @@ export default function TopUpManagement() {
         </button>
       ),
       render: (item: typeof topUpSchedules[0]) => (
-        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
           item.type === 'batch' 
-            ? 'bg-primary/10 text-primary border border-primary/20' 
-            : 'bg-accent/10 text-accent border border-accent/20'
+            ? 'bg-primary/10 text-primary' 
+            : 'bg-accent/10 text-accent'
         }`}>
-          {item.type === 'batch' ? (
-            <Users className="h-3.5 w-3.5" />
-          ) : (
-            <User className="h-3.5 w-3.5" />
-          )}
+          {item.type === 'batch' ? <Users className="h-3 w-3" /> : <User className="h-3 w-3" />}
           {item.type === 'batch' ? 'Batch' : 'Individual'}
-        </div>
+        </span>
       )
     },
     { 
@@ -756,31 +753,37 @@ export default function TopUpManagement() {
           {getSortIcon('name')}
         </button>
       ),
-      render: (item: typeof topUpSchedules[0]) => (
-        <div>
-          {item.type === 'individual' && item.account_id ? (
-            <div>
-              <button
-                className="font-medium text-primary hover:underline text-left"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNavigateToStudent(item.account_id!);
-                }}
-              >
-                {item.account_name}
-              </button>
-              {(() => {
-                const account = accountHolders.find(a => a.id === item.account_id);
-                return account ? (
-                  <p className="text-xs text-muted-foreground">{account.nric}</p>
-                ) : null;
-              })()}
+      render: (item: typeof topUpSchedules[0]) => {
+        const isRecent = new Date(item.created_at).getTime() >= NEW_BADGE_CUTOFF;
+        return (
+          <div>
+            <div className="flex items-center gap-1.5">
+              {item.type === 'individual' && item.account_id ? (
+                <button
+                  className="font-medium text-primary hover:underline text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigateToStudent(item.account_id!);
+                  }}
+                >
+                  {item.account_name}
+                </button>
+              ) : (
+                <span className="font-medium">{item.rule_name}</span>
+              )}
+              {isRecent && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                  NEW
+                </span>
+              )}
             </div>
-          ) : (
-            <p className="font-medium text-foreground">{item.rule_name}</p>
-          )}
-        </div>
-      )
+            {item.type === 'individual' && item.account_id && (() => {
+              const account = accountHolders.find(a => a.id === item.account_id);
+              return account ? <p className="text-xs text-muted-foreground">{account.nric}</p> : null;
+            })()}
+          </div>
+        );
+      }
     },
     { 
       key: 'amount', 
@@ -835,7 +838,7 @@ export default function TopUpManagement() {
           <span className="font-medium text-foreground">
             {new Date(item.created_at).toLocaleDateString('en-GB', {
               day: '2-digit',
-              month: 'short',
+              month: '2-digit',
               year: 'numeric'
             })}
           </span>
@@ -863,30 +866,16 @@ export default function TopUpManagement() {
           {getSortIcon('type')}
         </button>
       ),
-      render: (item: typeof topUpSchedules[0]) => {
-        const isRecent = new Date(item.created_at).getTime() >= NEW_BADGE_CUTOFF;
-        return (
-          <div className="flex items-center gap-2">
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-              item.type === 'batch' 
-                ? 'bg-primary/10 text-primary border border-primary/20' 
-                : 'bg-accent/10 text-accent border border-accent/20'
-            }`}>
-              {item.type === 'batch' ? (
-                <Users className="h-3.5 w-3.5" />
-              ) : (
-                <User className="h-3.5 w-3.5" />
-              )}
-              {item.type === 'batch' ? 'Batch' : 'Individual'}
-            </div>
-            {isRecent && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
-                New
-              </span>
-            )}
-          </div>
-        );
-      }
+      render: (item: typeof topUpSchedules[0]) => (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+          item.type === 'batch' 
+            ? 'bg-primary/10 text-primary' 
+            : 'bg-accent/10 text-accent'
+        }`}>
+          {item.type === 'batch' ? <Users className="h-3 w-3" /> : <User className="h-3 w-3" />}
+          {item.type === 'batch' ? 'Batch' : 'Individual'}
+        </span>
+      )
     },
     { 
       key: 'name', 
@@ -899,31 +888,37 @@ export default function TopUpManagement() {
           {getSortIcon('name')}
         </button>
       ),
-      render: (item: typeof topUpSchedules[0]) => (
-        <div>
-          {item.type === 'individual' && item.account_id ? (
-            <div>
-              <button
-                className="font-medium text-primary hover:underline text-left"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNavigateToStudent(item.account_id!);
-                }}
-              >
-                {item.account_name}
-              </button>
-              {(() => {
-                const account = accountHolders.find(a => a.id === item.account_id);
-                return account ? (
-                  <p className="text-xs text-muted-foreground">{account.nric}</p>
-                ) : null;
-              })()}
+      render: (item: typeof topUpSchedules[0]) => {
+        const isRecent = new Date(item.created_at).getTime() >= NEW_BADGE_CUTOFF;
+        return (
+          <div>
+            <div className="flex items-center gap-1.5">
+              {item.type === 'individual' && item.account_id ? (
+                <button
+                  className="font-medium text-primary hover:underline text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigateToStudent(item.account_id!);
+                  }}
+                >
+                  {item.account_name}
+                </button>
+              ) : (
+                <span className="font-medium">{item.rule_name}</span>
+              )}
+              {isRecent && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                  NEW
+                </span>
+              )}
             </div>
-          ) : (
-            <p className="font-medium text-foreground">{item.rule_name}</p>
-          )}
-        </div>
-      )
+            {item.type === 'individual' && item.account_id && (() => {
+              const account = accountHolders.find(a => a.id === item.account_id);
+              return account ? <p className="text-xs text-muted-foreground">{account.nric}</p> : null;
+            })()}
+          </div>
+        );
+      }
     },
     { 
       key: 'amount', 
@@ -975,10 +970,12 @@ export default function TopUpManagement() {
       ),
       render: (item: typeof topUpSchedules[0]) => {
         const schedDate = new Date(item.scheduled_date);
-        // Convert 24h time to 12h AM/PM format
+        // Convert 24h time to 12h AM/PM format, ensuring HH:MM only (remove seconds if present)
         let timeStr = '—';
         if (item.scheduled_time) {
-          const [hours, minutes] = item.scheduled_time.split(':');
+          const timeParts = item.scheduled_time.split(':');
+          const hours = timeParts[0];
+          const minutes = timeParts[1];
           const hour = parseInt(hours);
           const ampm = hour >= 12 ? 'PM' : 'AM';
           const hour12 = hour % 12 || 12;
@@ -1067,264 +1064,221 @@ export default function TopUpManagement() {
 
       {/* All Top-up Tracking */}
       <Card>
-        <CardHeader className="pb-3">
-          <div>
-            <CardTitle>Top-up Orders</CardTitle>
-            <CardDescription>Track all top-up operations • Recently created orders (last 7 days) are highlighted</CardDescription>
-          </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Top-up Tracking</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Filter and Sort Controls */}
-          <div className="space-y-4">
-            {/* Search */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium">Search Top-ups</label>
-              <div className="relative">
+          {/* Simplified Filter Controls */}
+          <div className="space-y-3">
+            {/* Top Row: Search + Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search */}
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search for Top-Up Name..."
+                  placeholder="Search by name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-9"
+                  className="pl-9 pr-9 h-9"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
-            </div>
-            
-            {/* Type and Status Filters */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Top Up Type Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Top Up Type</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span className="text-sm">
-                        {filterTypes.length === 2 ? 'All Types' : filterTypes.length === 1 ? filterTypes[0].charAt(0).toUpperCase() + filterTypes[0].slice(1) : 'Select Type'}
-                      </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="type-individual"
-                          checked={filterTypes.includes('individual')}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilterTypes(prev => [...prev, 'individual']);
-                            } else if (filterTypes.length > 1) {
-                              setFilterTypes(prev => prev.filter(t => t !== 'individual'));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="type-individual"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          Individual
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="type-batch"
-                          checked={filterTypes.includes('batch')}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilterTypes(prev => [...prev, 'batch']);
-                            } else if (filterTypes.length > 1) {
-                              setFilterTypes(prev => prev.filter(t => t !== 'batch'));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="type-batch"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          Batch
-                        </label>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              
+              {/* Type Filter */}
+              <Select 
+                value={filterTypes.length === 2 ? 'all' : filterTypes[0] || 'all'} 
+                onValueChange={(value) => {
+                  if (value === 'all') setFilterTypes(['individual', 'batch']);
+                  else setFilterTypes([value]);
+                }}
+              >
+                <SelectTrigger className="w-[130px] h-9">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="batch">Batch</SelectItem>
+                </SelectContent>
+              </Select>
 
-              {/* Status Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      <span className="text-sm">
-                        {filterStatuses.length === 3 ? 'All Statuses' : filterStatuses.length > 0 ? `${filterStatuses.length} selected` : 'Select Status'}
-                      </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[200px] p-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="status-scheduled"
-                          checked={filterStatuses.includes('scheduled')}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilterStatuses(prev => [...prev, 'scheduled']);
-                            } else if (filterStatuses.length > 1) {
-                              setFilterStatuses(prev => prev.filter(s => s !== 'scheduled'));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="status-scheduled"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          Scheduled
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="status-completed"
-                          checked={filterStatuses.includes('completed')}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilterStatuses(prev => [...prev, 'completed']);
-                            } else if (filterStatuses.length > 1) {
-                              setFilterStatuses(prev => prev.filter(s => s !== 'completed'));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="status-completed"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          Completed
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="status-cancelled"
-                          checked={filterStatuses.includes('cancelled')}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setFilterStatuses(prev => [...prev, 'cancelled']);
-                            } else if (filterStatuses.length > 1) {
-                              setFilterStatuses(prev => prev.filter(s => s !== 'cancelled'));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="status-cancelled"
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          Cancelled
-                        </label>
-                      </div>
+              {/* Status Filter - Multi-select */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-9 w-[130px] justify-between">
+                    <span className="truncate">
+                      {filterStatuses.length === 3 ? 'All Status' : filterStatuses.length === 0 ? 'Status' : `${filterStatuses.length} selected`}
+                    </span>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-3" align="start">
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="status-scheduled"
+                        checked={filterStatuses.includes('scheduled')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFilterStatuses([...filterStatuses, 'scheduled']);
+                          } else {
+                            setFilterStatuses(filterStatuses.filter(s => s !== 'scheduled'));
+                          }
+                        }}
+                      />
+                      <label htmlFor="status-scheduled" className="text-sm cursor-pointer">
+                        Scheduled
+                      </label>
                     </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            
-            {/* Date Range Filters and Sort By */}
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <label className="text-sm font-medium">Filter by Scheduled Date</label>
-                <div className="flex items-center gap-2 shrink-0">
-                  <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Sort By:</label>
-                  <Select value={sortOption} onValueChange={(value: 'default' | 'recently-created') => setSortOption(value)}>
-                    <SelectTrigger className="w-[200px] h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">Scheduled Date (Default)</SelectItem>
-                      <SelectItem value="recently-created">Recently Created</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'all' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('all')}
-                >
-                  All Time
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'this-month' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('this-month')}
-                >
-                  This Month
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'last-month' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('last-month')}
-                >
-                  Last Month
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'this-quarter' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('this-quarter')}
-                >
-                  This Quarter
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'half-year' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('half-year')}
-                >
-                  Half Year
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'full-year' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('full-year')}
-                >
-                  This Year
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filterPeriod === 'next-year' ? 'default' : 'outline'}
-                  onClick={() => handleFilterPeriodChange('next-year')}
-                >
-                  Next Year
-                </Button>
-              </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="status-completed"
+                        checked={filterStatuses.includes('completed')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFilterStatuses([...filterStatuses, 'completed']);
+                          } else {
+                            setFilterStatuses(filterStatuses.filter(s => s !== 'completed'));
+                          }
+                        }}
+                      />
+                      <label htmlFor="status-completed" className="text-sm cursor-pointer">
+                        Completed
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="status-cancelled"
+                        checked={filterStatuses.includes('cancelled')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFilterStatuses([...filterStatuses, 'cancelled']);
+                          } else {
+                            setFilterStatuses(filterStatuses.filter(s => s !== 'cancelled'));
+                          }
+                        }}
+                      />
+                      <label htmlFor="status-cancelled" className="text-sm cursor-pointer">
+                        Cancelled
+                      </label>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Sort */}
+              <Select value={sortOption} onValueChange={(value: 'default' | 'recently-created') => setSortOption(value)}>
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">By Schedule Date</SelectItem>
+                  <SelectItem value="recently-created">By Created Date</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Custom Date Range */}
-            <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg">
-              <div className="grid gap-2">
-                <Label className="text-sm">Start Date</Label>
+            {/* Date Period Filters - Simplified */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-1">Period:</span>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'all' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('all')}
+                className="h-7 text-xs"
+              >
+                All
+              </Button>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'this-month' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('this-month')}
+                className="h-7 text-xs"
+              >
+                This Month
+              </Button>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'last-month' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('last-month')}
+                className="h-7 text-xs"
+              >
+                Last Month
+              </Button>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'this-quarter' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('this-quarter')}
+                className="h-7 text-xs"
+              >
+                This Quarter
+              </Button>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'full-year' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('full-year')}
+                className="h-7 text-xs"
+              >
+                This Year
+              </Button>
+              <Button
+                size="sm"
+                variant={filterPeriod === 'next-year' ? 'default' : 'outline'}
+                onClick={() => handleFilterPeriodChange('next-year')}
+                className="h-7 text-xs"
+              >
+                Next Year
+              </Button>
+              
+              {/* Custom Date Range - Compact */}
+              <div className="flex items-center gap-1.5 ml-auto">
+                {/* Clear All Filters - Only show when filters are active */}
+                {(searchTerm !== '' || 
+                  filterTypes.length !== 2 || 
+                  filterStatuses.length !== 3 || 
+                  filterPeriod !== 'all' || 
+                  customStartDate !== '' || 
+                  customEndDate !== '') && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterTypes(['individual', 'batch']);
+                      setFilterStatuses(['scheduled', 'completed', 'cancelled']);
+                      setFilterPeriod('all');
+                      setCustomStartDate('');
+                      setCustomEndDate('');
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All
+                  </Button>
+                )}
                 <DateInput
                   value={customStartDate}
                   onChange={(date) => {
                     setCustomStartDate(date);
                     setFilterPeriod('custom');
                   }}
+                  className="w-[110px] h-7 text-xs"
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label className="text-sm">End Date</Label>
+                <span className="text-muted-foreground text-xs">to</span>
                 <DateInput
                   value={customEndDate}
                   onChange={(date) => {
                     setCustomEndDate(date);
                     setFilterPeriod('custom');
                   }}
+                  className="w-[110px] h-7 text-xs"
                 />
               </div>
             </div>
@@ -1947,7 +1901,7 @@ export default function TopUpManagement() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Schedule Date</p>
-                    <p className="font-medium">{scheduleDate ? new Date(scheduleDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
+                    <p className="font-medium">{scheduleDate ? new Date(scheduleDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Schedule Time</p>
@@ -2198,14 +2152,23 @@ export default function TopUpManagement() {
                   <p className="font-medium">
                     {new Date(selectedScheduleDetail.scheduled_date).toLocaleDateString('en-GB', {
                       day: '2-digit',
-                      month: 'short',
+                      month: '2-digit',
                       year: 'numeric'
                     })}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Scheduled Time</p>
-                  <p className="font-medium">{selectedScheduleDetail.scheduled_time || '—'}</p>
+                  <p className="font-medium">
+                    {selectedScheduleDetail.scheduled_time ? (() => {
+                      const timeParts = selectedScheduleDetail.scheduled_time.split(':');
+                      const hours = parseInt(timeParts[0]);
+                      const minutes = timeParts[1];
+                      const ampm = hours >= 12 ? 'PM' : 'AM';
+                      const hour12 = hours % 12 || 12;
+                      return `${hour12}:${minutes} ${ampm}`;
+                    })() : '—'}
+                  </p>
                 </div>
               </div>
 
@@ -2216,13 +2179,20 @@ export default function TopUpManagement() {
                   <p className="font-medium text-success">
                     {new Date(selectedScheduleDetail.executed_date).toLocaleDateString('en-GB', {
                       day: '2-digit',
-                      month: 'short',
+                      month: '2-digit',
                       year: 'numeric'
-                    })}{' '}
-                    {new Date(selectedScheduleDetail.executed_date).toLocaleTimeString('en-GB', {
-                      hour: '2-digit',
-                      minute: '2-digit'
                     })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">Executed Time</p>
+                  <p className="font-medium text-success">
+                    {(() => {
+                      const execDate = new Date(selectedScheduleDetail.executed_date);
+                      const hours = execDate.getHours();
+                      const minutes = execDate.getMinutes();
+                      const ampm = hours >= 12 ? 'PM' : 'AM';
+                      const hour12 = hours % 12 || 12;
+                      return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+                    })()}
                   </p>
                 </div>
               )}
@@ -2236,87 +2206,6 @@ export default function TopUpManagement() {
                   </p>
                 </div>
               )}
-
-              {/* Eligible Accounts List for Batch - Always show for batch orders */}
-              {selectedScheduleDetail.type === 'batch' && (() => {
-                const eligibleAccounts = selectedScheduleDetail.remarks 
-                  ? getEligibleAccountsForBatch(selectedScheduleDetail.remarks)
-                  : [];
-                
-                return (
-                  <div className="space-y-3 border-t pt-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">Eligible Accounts ({eligibleAccounts.length})</h3>
-                      <p className="text-xs text-muted-foreground">All accounts matching the targeting criteria</p>
-                    </div>
-                    
-                    {eligibleAccounts.length > 0 ? (
-                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                        {eligibleAccounts.map((account, index) => {
-                          const birthDate = new Date(account.date_of_birth);
-                          const today = new Date();
-                          const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-                          const inSchool = isAccountInSchool(account.id);
-                          
-                          return (
-                            <div key={account.id} className="p-3 border rounded-lg hover:bg-muted/30 transition-colors">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded">#{index + 1}</span>
-                                  <button
-                                    className="font-medium text-primary hover:underline text-left"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleNavigateToStudent(account.id);
-                                    }}
-                                  >
-                                    {account.name}
-                                  </button>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-xs text-muted-foreground">Balance</p>
-                                  <p className="font-semibold text-sm">S${formatCurrency(Number(account.balance))}</p>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                                <div>
-                                  <p className="text-muted-foreground">NRIC</p>
-                                  <p className="font-medium">{account.nric}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Age</p>
-                                  <p className="font-medium">{age} years</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Education</p>
-                                  <p className="font-medium capitalize">{account.education_level?.replace('_', ' ') || '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-muted-foreground">Status</p>
-                                  {inSchool ? (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-success/10 text-success border border-success/20">
-                                      In School
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground border">
-                                      Not in School
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg bg-muted/20">
-                        <p className="text-muted-foreground text-sm">No eligible accounts found for this batch order</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
             </div>
           )}
           <div className="flex justify-between items-center gap-3">
@@ -2386,14 +2275,24 @@ export default function TopUpManagement() {
           </DialogHeader>
           <div className="mt-4">
             {selectedScheduleDetail && (() => {
-              const eligibleAccounts = getEligibleAccountsForBatch(selectedScheduleDetail.remarks);
-              return eligibleAccounts.length > 0 ? (
+              const allEligibleAccounts = getEligibleAccountsForBatch(selectedScheduleDetail.remarks);
+              // Filter accounts based on search term
+              const eligibleAccounts = allEligibleAccounts.filter(account => {
+                if (!eligibleAccountsSearch) return true;
+                const searchLower = eligibleAccountsSearch.toLowerCase();
+                return (
+                  account.name.toLowerCase().includes(searchLower) ||
+                  account.nric.toLowerCase().includes(searchLower)
+                );
+              });
+              
+              return allEligibleAccounts.length > 0 ? (
                 <div className="space-y-3">
                   {/* Summary Card */}
                   <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg border">
                     <div>
                       <p className="text-xs text-muted-foreground">Total Accounts</p>
-                      <p className="text-2xl font-bold text-primary">{eligibleAccounts.length}</p>
+                      <p className="text-2xl font-bold text-primary">{allEligibleAccounts.length}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Amount per Account</p>
@@ -2401,12 +2300,31 @@ export default function TopUpManagement() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Total Disbursement</p>
-                      <p className="text-2xl font-bold text-success">S${formatCurrency(Number(selectedScheduleDetail.amount) * eligibleAccounts.length)}</p>
+                      <p className="text-2xl font-bold text-success">S${formatCurrency(Number(selectedScheduleDetail.amount) * allEligibleAccounts.length)}</p>
                     </div>
                   </div>
 
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by Name or NRIC..."
+                      value={eligibleAccountsSearch}
+                      onChange={(e) => setEligibleAccountsSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+
+                  {/* Results Count */}
+                  {eligibleAccountsSearch && (
+                    <div className="text-sm text-muted-foreground">
+                      Showing {eligibleAccounts.length} of {allEligibleAccounts.length} accounts
+                    </div>
+                  )}
+
                   {/* Accounts List */}
-                  <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
+                  {eligibleAccounts.length > 0 ? (
+                    <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                     {eligibleAccounts.map((account, index) => {
                       const birthDate = new Date(account.date_of_birth);
                       const today = new Date();
@@ -2470,7 +2388,13 @@ export default function TopUpManagement() {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-lg bg-muted/20">
+                      <p className="text-muted-foreground">No accounts match your search criteria</p>
+                      <p className="text-sm text-muted-foreground mt-1">Try adjusting your search term</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -2480,7 +2404,13 @@ export default function TopUpManagement() {
             })()}
           </div>
           <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowBatchEligibleAccounts(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowBatchEligibleAccounts(false);
+                setEligibleAccountsSearch('');
+              }}
+            >
               Close
             </Button>
           </div>
