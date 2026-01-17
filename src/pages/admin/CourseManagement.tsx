@@ -581,15 +581,41 @@ export default function CourseManagement() {
           onClick={() => handleSort('fee')}
           className="flex items-center font-medium hover:text-foreground transition-colors"
         >
-          Fee
+          Total Fee
           {renderSortIcon('fee')}
         </button>
       ),
-      render: (course: typeof courses[0]) => (
-        <span className="font-semibold text-foreground">
-          ${formatCurrency(Number(course.fee))}
-        </span>
-      ),
+      render: (course: typeof courses[0]) => {
+        // Calculate total fee based on billing cycle
+        const feePerCycle = Number(course.fee);
+        
+        if (course.billing_cycle === 'one_time') {
+          // For one-time payments, fee is already the total
+          return (
+            <span className="font-semibold text-foreground">
+              ${formatCurrency(feePerCycle)}
+            </span>
+          );
+        }
+        
+        // For recurring payments, calculate total fee
+        if (course.course_run_start && course.course_run_end) {
+          const cycles = calculateCycles(course.course_run_start, course.course_run_end, course.billing_cycle);
+          const totalFee = feePerCycle * cycles;
+          return (
+            <span className="font-semibold text-foreground">
+              ${formatCurrency(totalFee)}
+            </span>
+          );
+        }
+        
+        // Fallback: show fee per cycle if dates are not available
+        return (
+          <span className="font-semibold text-foreground">
+            ${formatCurrency(feePerCycle)}
+          </span>
+        );
+      },
     },
     {
       key: 'status',
