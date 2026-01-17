@@ -66,6 +66,8 @@ export default function AdminDashboard() {
   const [showBatchDetailModal, setShowBatchDetailModal] = useState(false);
   const [showBatchEligibleAccounts, setShowBatchEligibleAccounts] = useState(false);
   const [eligibleAccountsSearch, setEligibleAccountsSearch] = useState('');
+  const [selectedIndividualDetail, setSelectedIndividualDetail] = useState<typeof topUpSchedules[0] | null>(null);
+  const [showIndividualDetailModal, setShowIndividualDetailModal] = useState(false);
   
   const { data: topUpSchedules = [], isLoading: loadingSchedules } = useTopUpSchedules();
   const { data: courseCharges = [], isLoading: loadingCharges } = useCourseCharges();
@@ -409,6 +411,10 @@ export default function AdminDashboard() {
                     data={scheduledIndividualTopUps} 
                     columns={individualScheduleColumns}
                     emptyMessage="No scheduled individual top-ups"
+                    onRowClick={(schedule) => {
+                      setSelectedIndividualDetail(schedule);
+                      setShowIndividualDetailModal(true);
+                    }}
                   />
                 </TabsContent>
               </Tabs>
@@ -859,6 +865,129 @@ export default function AdminDashboard() {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Individual Top-up Detail Modal */}
+      <Dialog open={showIndividualDetailModal} onOpenChange={setShowIndividualDetailModal}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Individual Top-up Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the scheduled individual top-up
+            </DialogDescription>
+          </DialogHeader>
+          {selectedIndividualDetail && (
+            <div className="space-y-6 py-4">
+              {/* Basic Information */}
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Account Holder</p>
+                    <p className="font-medium text-foreground">{selectedIndividualDetail.account_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Status</p>
+                    <StatusBadge status={selectedIndividualDetail.status === 'failed' ? 'cancelled' : selectedIndividualDetail.status} />
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground mb-1">Top-up Amount</p>
+                    <p className="font-semibold text-success text-2xl">
+                      S${formatCurrency(Number(selectedIndividualDetail.amount))}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Schedule Information */}
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium text-foreground mb-3">Schedule Information</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Scheduled Date</p>
+                      <p className="font-medium text-foreground">
+                        {new Date(selectedIndividualDetail.scheduled_date).toLocaleDateString('en-GB', { 
+                          day: '2-digit', 
+                          month: '2-digit', 
+                          year: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Scheduled Time</p>
+                      <p className="font-medium text-foreground">{selectedIndividualDetail.scheduled_time || '09:00'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Information */}
+                {selectedIndividualDetail.account_id && (() => {
+                  const account = accountHolders.find(acc => acc.id === selectedIndividualDetail.account_id);
+                  if (account) {
+                    return (
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm font-medium text-foreground mb-3">Account Information</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">NRIC</p>
+                            <p className="font-medium text-foreground">{account.nric}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Current Balance</p>
+                            <p className="font-medium text-foreground">S${formatCurrency(Number(account.balance))}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Account Status</p>
+                            <StatusBadge status={account.status} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Balance After Top-up</p>
+                            <p className="font-semibold text-success">
+                              S${formatCurrency(Number(account.balance) + Number(selectedIndividualDetail.amount))}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Remarks */}
+                {selectedIndividualDetail.remarks && (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Remarks</p>
+                    <p className="text-sm text-foreground">{selectedIndividualDetail.remarks}</p>
+                  </div>
+                )}
+
+                {/* Execution Information (if completed) */}
+                {selectedIndividualDetail.executed_date && (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Executed On</p>
+                    <p className="font-medium text-foreground">
+                      {new Date(selectedIndividualDetail.executed_date).toLocaleDateString('en-GB', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowIndividualDetailModal(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  setShowIndividualDetailModal(false);
+                  navigate('/admin/topup');
+                }}>
+                  Go to Top-Up Management
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
