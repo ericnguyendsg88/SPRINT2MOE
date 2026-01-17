@@ -204,7 +204,7 @@ export default function AdminSettings() {
           />
         </div>
 
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div className="rounded-lg border border-border overflow-hidden min-h-[600px]">
           <Table>
             <TableHeader>
               <TableRow>
@@ -223,55 +223,63 @@ export default function AdminSettings() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedProviders.map((provider, index) => {
-                  const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
-                  return (
-                    <TableRow key={provider.id}>
-                      <TableCell className="text-muted-foreground">{globalIndex}</TableCell>
-                      <TableCell className="font-medium text-foreground">{provider.name}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {provider.educationLevels.map((level) => {
-                            const label = EDUCATION_LEVEL_OPTIONS.find(opt => opt.value === level)?.label || level;
-                            return (
-                              <span key={level} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                                {label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          provider.isActive 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {provider.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(provider)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant={provider.isActive ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => openToggleStatusDialog(provider)}
-                            className={provider.isActive ? 'text-destructive hover:bg-destructive/10 border-destructive/30' : 'bg-green-600 hover:bg-green-700 text-white'}
-                          >
-                            {provider.isActive ? 'Deactivate' : 'Activate'}
-                          </Button>
-                        </div>
-                      </TableCell>
+                <>
+                  {paginatedProviders.map((provider, index) => {
+                    const globalIndex = (currentPage - 1) * itemsPerPage + index + 1;
+                    return (
+                      <TableRow key={provider.id}>
+                        <TableCell className="text-muted-foreground">{globalIndex}</TableCell>
+                        <TableCell className="font-medium text-foreground">{provider.name}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {provider.educationLevels.map((level) => {
+                              const label = EDUCATION_LEVEL_OPTIONS.find(opt => opt.value === level)?.label || level;
+                              return (
+                                <span key={level} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                  {label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            provider.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {provider.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditDialog(provider)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant={provider.isActive ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => openToggleStatusDialog(provider)}
+                              className={provider.isActive ? 'text-destructive hover:bg-destructive/10 border-destructive/30' : 'bg-green-600 hover:bg-green-700 text-white'}
+                            >
+                              {provider.isActive ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {/* Empty rows to maintain consistent table height */}
+                  {Array.from({ length: itemsPerPage - paginatedProviders.length }).map((_, index) => (
+                    <TableRow key={`empty-${index}`} className="hover:bg-transparent">
+                      <TableCell colSpan={5} className="h-[53px]">&nbsp;</TableCell>
                     </TableRow>
-                  );
-                })
+                  ))}
+                </>
               )}
             </TableBody>
           </Table>
