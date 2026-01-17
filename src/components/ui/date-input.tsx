@@ -208,7 +208,7 @@ export function DateInput({
               <SelectTrigger className="flex-1 h-10">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[150]">
                 {MONTHS.map((month, index) => (
                   <SelectItem key={month} value={index.toString()}>
                     {month}
@@ -224,7 +224,7 @@ export function DateInput({
               <SelectTrigger className="w-[110px] h-10">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="max-h-[200px]">
+              <SelectContent className="max-h-[200px] z-[150]">
                 {years.map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     {year}
