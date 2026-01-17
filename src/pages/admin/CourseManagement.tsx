@@ -662,20 +662,7 @@ export default function CourseManagement() {
       {/* Course Tracking Card */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Course Tracking</CardTitle>
-            {hasActiveFilters && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={clearAllFilters}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Clear All Filters
-              </Button>
-            )}
-          </div>
+          <CardTitle className="text-lg">Course Tracking</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filter Controls */}
@@ -852,11 +839,24 @@ export default function CourseManagement() {
                 className="w-[80px] h-8 text-xs"
               />
 
-              {/* Export Button */}
-              <Button variant="outline" size="sm" className="h-8 text-xs ml-auto">
-                <Download className="h-4 w-4 mr-1" />
-                Export
-              </Button>
+              {/* Clear All Filters & Export Buttons */}
+              <div className="flex items-center gap-2 ml-auto">
+                {hasActiveFilters && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={clearAllFilters}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear All Filters
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="h-8 text-xs">
+                  <Download className="h-4 w-4 mr-1" />
+                  Export
+                </Button>
+              </div>
             </div>
 
             {/* Results Count */}
