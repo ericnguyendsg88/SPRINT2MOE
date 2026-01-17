@@ -7,7 +7,7 @@ import { StatusBadge, type Status } from '@/components/shared/StatusBadge';
 import { useAccountHolders, useUpdateAccountHolder } from '@/hooks/useAccountHolders';
 import { useCourseCharges, CourseCharge, useUpdateCourseCharge } from '@/hooks/useCourseCharges';
 import { useCreateTransaction } from '@/hooks/useTransactions';
-import { useEnrollments } from '@/hooks/useEnrollments';
+import { useEnrollmentsByAccount } from '@/hooks/useEnrollments';
 import { useCourses } from '@/hooks/useCourses';
 import { useCurrentUser } from '@/contexts/CurrentUserContext';
 import {
@@ -77,8 +77,13 @@ export default function CourseFees() {
   // Fetch data from database
   const { data: accountHolders = [], isLoading: loadingAccounts } = useAccountHolders();
   const { data: courseCharges = [] } = useCourseCharges();
-  const { data: enrollments = [] } = useEnrollments();
   const { data: courses = [] } = useCourses();
+  
+  // Find current user based on context - need to find user first for enrollment query
+  const currentUser = accountHolders.find(a => a.id === currentUserId) || accountHolders[0];
+  
+  // Use account-specific enrollment query
+  const { data: enrollments = [] } = useEnrollmentsByAccount(currentUser?.id || '');
   
   // Mutations for actual payment processing
   const updateAccountMutation = useUpdateAccountHolder();
@@ -86,9 +91,6 @@ export default function CourseFees() {
   const createTransactionMutation = useCreateTransaction();
   
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Find current user based on context
-  const currentUser = accountHolders.find(a => a.id === currentUserId) || accountHolders[0];
 
   const userCharges = courseCharges.filter(c => c.account_id === currentUser?.id);
 
@@ -135,9 +137,8 @@ export default function CourseFees() {
   const pendingCharges = userCharges.filter(isChargeInBillingWindow);
   const paidCharges = userCharges.filter(c => c.status === 'clear');
 
-  // Get user's enrolled courses
-  const userEnrollments = enrollments.filter(e => e.account_id === currentUser?.id);
-  const enrolledCourses = userEnrollments.map(enrollment => {
+  // Get user's enrolled courses - enrollments already filtered by account
+  const enrolledCourses = enrollments.map(enrollment => {
     const course = courses.find(c => c.id === enrollment.course_id);
     return course ? { ...enrollment, course } : null;
   }).filter(Boolean);

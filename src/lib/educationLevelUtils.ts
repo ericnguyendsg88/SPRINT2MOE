@@ -29,14 +29,17 @@ export function determineEducationLevel(
   let highestPriority = 0;
 
   for (const enrollment of activeEnrollments) {
-    // Get education level directly from the course
-    const courseEducationLevel = enrollment.courses?.education_level;
-    if (!courseEducationLevel) continue;
+    // Find the provider for this course to get education level
+    const provider = providers.find(p => p.name === enrollment.courses?.provider);
+    if (!provider || !provider.educationLevels || provider.educationLevels.length === 0) continue;
 
-    const priority = EDUCATION_LEVEL_PRIORITY[courseEducationLevel];
-    if (priority > highestPriority) {
-      highestPriority = priority;
-      highestLevel = courseEducationLevel;
+    // Use the first (or highest) education level from the provider
+    for (const level of provider.educationLevels) {
+      const priority = EDUCATION_LEVEL_PRIORITY[level];
+      if (priority > highestPriority) {
+        highestPriority = priority;
+        highestLevel = level;
+      }
     }
   }
 

@@ -22,7 +22,6 @@ export interface EnrollmentWithCourse extends Enrollment {
     billing_cycle: string;
     course_run_start: string | null;
     course_run_end: string | null;
-    education_level: 'primary' | 'secondary' | 'post_secondary' | 'tertiary' | 'postgraduate' | null;
   };
 }
 
@@ -34,7 +33,7 @@ export function useEnrollments() {
         .from('enrollments')
         .select(`
           *,
-          courses (id, name, provider, fee, billing_cycle, course_run_start, course_run_end, education_level)
+          courses (id, name, provider, fee, billing_cycle, course_run_start, course_run_end)
         `)
         .order('enrollment_date', { ascending: false });
       
@@ -52,7 +51,7 @@ export function useEnrollmentsByAccount(accountId: string) {
         .from('enrollments')
         .select(`
           *,
-          courses (id, name, provider, fee, billing_cycle, course_run_start, course_run_end, education_level)
+          courses (id, name, provider, fee, billing_cycle, course_run_start, course_run_end)
         `)
         .eq('account_id', accountId)
         .order('enrollment_date', { ascending: false });
