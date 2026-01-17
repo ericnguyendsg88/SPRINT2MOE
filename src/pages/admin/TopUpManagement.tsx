@@ -94,8 +94,11 @@ export default function TopUpManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTypes, setFilterTypes] = useState<string[]>(['individual', 'batch']);
   const [filterStatuses, setFilterStatuses] = useState<string[]>(['scheduled', 'completed', 'cancelled']);
-  const [sortColumn, setSortColumn] = useState<'type' | 'name' | 'amount' | 'status' | 'scheduledDate' | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortColumn, setSortColumn] = useState<'type' | 'name' | 'amount' | 'status' | 'scheduledDate' | 'createdDate' | null>('scheduledDate'); // Default to scheduled date
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc'); // Default to descending (most recent first)
+  const [filterRecentlyCreated, setFilterRecentlyCreated] = useState(false);
+  const [createdDateFrom, setCreatedDateFrom] = useState('');
+  const [createdDateTo, setCreatedDateTo] = useState('');
 
   // Fetch data from database
   const { data: topUpSchedules = [], isLoading: loadingSchedules } = useTopUpSchedules();
@@ -431,6 +434,11 @@ export default function TopUpManagement() {
         toast.success(`Top-up scheduled for ${totalAccounts} account${totalAccounts !== 1 ? 's' : ''}`);
       }
 
+      // Switch to creation date sorting and enable recently created filter
+      setSortColumn('createdDate');
+      setSortDirection('desc');
+      setFilterRecentlyCreated(true);
+
       setIsTopUpDialogOpen(false);
       setSelectedAccounts([]);
       setTopUpAmount('');
@@ -517,6 +525,11 @@ export default function TopUpManagement() {
           : `${targetedAccounts.length} account(s) targeted`,
       });
 
+      // Switch to creation date sorting and enable recently created filter
+      setSortColumn('createdDate');
+      setSortDirection('desc');
+      setFilterRecentlyCreated(true);
+
       // Reset form
       setIsTopUpDialogOpen(false);
       setBatchAmount('');
@@ -571,9 +584,27 @@ export default function TopUpManagement() {
     const searchLower = searchTerm.toLowerCase().trim();
     
     let filtered = topUpSchedules.filter(schedule => {
-      // Filter by date range
+      // Filter by scheduled date range
       const scheduleDate = new Date(schedule.scheduled_date);
       if (scheduleDate < start || scheduleDate > end) return false;
+      
+      // Filter by creation date range
+      if (createdDateFrom || createdDateTo) {
+        const createdDate = new Date(schedule.created_at);
+        if (createdDateFrom && createdDate < new Date(createdDateFrom)) return false;
+        if (createdDateTo) {
+          const endOfDay = new Date(createdDateTo);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (createdDate > endOfDay) return false;
+        }
+      }
+      
+      // Filter by recently created (last 7 days)
+      if (filterRecentlyCreated) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        if (new Date(schedule.created_at) < sevenDaysAgo) return false;
+      }
       
       // Filter by type
       if (!filterTypes.includes(schedule.type)) return false;
@@ -599,66 +630,61 @@ export default function TopUpManagement() {
       return true;
     });
 
-    // Separate recent and older items
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const recentItems = filtered.filter(item => new Date(item.created_at) >= sevenDaysAgo);
-    const olderItems = filtered.filter(item => new Date(item.created_at) < sevenDaysAgo);
-
-    // Apply sorting to each group
-    const sortGroup = (items: typeof filtered) => {
-      if (sortColumn) {
-        items.sort((a, b) => {
-          let compareResult = 0;
-          
-          switch (sortColumn) {
-            case 'type':
-              compareResult = a.type.localeCompare(b.type);
-              break;
-            case 'name':
-              const nameA = a.type === 'individual' ? (a.account_name || '') : (a.rule_name || '');
-              const nameB = b.type === 'individual' ? (b.account_name || '') : (b.rule_name || '');
-              compareResult = nameA.localeCompare(nameB);
-              break;
-            case 'amount':
-              compareResult = Number(a.amount) - Number(b.amount);
-              break;
-            case 'status':
-              compareResult = a.status.localeCompare(b.status);
-              break;
-            case 'scheduledDate':
-              const dateA = new Date(a.scheduled_date);
-              const dateB = new Date(b.scheduled_date);
-              compareResult = dateA.getTime() - dateB.getTime();
-              break;
-          }
-          
-          return sortDirection === 'asc' ? compareResult : -compareResult;
-        });
-      } else {
-        // Default sort by created_at descending when no column is selected
-        items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let compareResult = 0;
+      
+      switch (sortColumn) {
+        case 'type':
+          compareResult = a.type.localeCompare(b.type);
+          break;
+        case 'name':
+          const nameA = a.type === 'individual' ? (a.account_name || '') : (a.rule_name || '');
+          const nameB = b.type === 'individual' ? (b.account_name || '') : (b.rule_name || '');
+          compareResult = nameA.localeCompare(nameB);
+          break;
+        case 'amount':
+          compareResult = Number(a.amount) - Number(b.amount);
+          break;
+        case 'status':
+          compareResult = a.status.localeCompare(b.status);
+          break;
+        case 'scheduledDate':
+          const dateA = new Date(a.scheduled_date);
+          const dateB = new Date(b.scheduled_date);
+          compareResult = dateA.getTime() - dateB.getTime();
+          break;
+        case 'createdDate':
+          const createdA = new Date(a.created_at);
+          const createdB = new Date(b.created_at);
+          compareResult = createdA.getTime() - createdB.getTime();
+          break;
+        default:
+          // Default sort by scheduled date descending
+          const defaultDateA = new Date(a.scheduled_date);
+          const defaultDateB = new Date(b.scheduled_date);
+          compareResult = defaultDateA.getTime() - defaultDateB.getTime();
       }
-      return items;
-    };
+      
+      return sortDirection === 'asc' ? compareResult : -compareResult;
+    });
 
-    // Sort both groups and combine with recent items first
-    return [...sortGroup(recentItems), ...sortGroup(olderItems)];
-  }, [topUpSchedules, filterPeriod, customStartDate, customEndDate, accountHolders, searchTerm, filterTypes, filterStatuses, sortColumn, sortDirection]);
+    return filtered;
+  }, [topUpSchedules, filterPeriod, customStartDate, customEndDate, accountHolders, searchTerm, filterTypes, filterStatuses, sortColumn, sortDirection, filterRecentlyCreated, createdDateFrom, createdDateTo]);
 
-  const handleSort = (column: 'type' | 'name' | 'amount' | 'status' | 'scheduledDate') => {
+  const handleSort = (column: 'type' | 'name' | 'amount' | 'status' | 'scheduledDate' | 'createdDate') => {
     if (sortColumn === column) {
       // Toggle direction if same column
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new column with ascending direction
+      // Set new column with appropriate default direction
       setSortColumn(column);
-      setSortDirection('asc');
+      // For date columns, default to descending (most recent first)
+      setSortDirection((column === 'scheduledDate' || column === 'createdDate') ? 'desc' : 'asc');
     }
   };
 
-  const getSortIcon = (column: 'type' | 'name' | 'amount' | 'status' | 'scheduledDate') => {
+  const getSortIcon = (column: 'type' | 'name' | 'amount' | 'status' | 'scheduledDate' | 'createdDate') => {
     if (sortColumn !== column) {
       return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
     }
@@ -956,22 +982,65 @@ export default function TopUpManagement() {
           {getSortIcon('scheduledDate')}
         </button>
       ),
-      render: (item: typeof topUpSchedules[0]) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-foreground">
-            {new Date(item.scheduled_date).toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric'
-            })}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {item.scheduled_time 
-              ? item.scheduled_time.slice(0, 5)
-              : '—'}
-          </span>
-        </div>
-      )
+      render: (item: typeof topUpSchedules[0]) => {
+        const schedDate = new Date(item.scheduled_date);
+        // Convert 24h time to 12h AM/PM format
+        let timeStr = '—';
+        if (item.scheduled_time) {
+          const [hours, minutes] = item.scheduled_time.split(':');
+          const hour = parseInt(hours);
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const hour12 = hour % 12 || 12;
+          timeStr = `${hour12}:${minutes} ${ampm}`;
+        }
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-foreground">
+              {schedDate.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {timeStr}
+            </span>
+          </div>
+        );
+      }
+    },
+    { 
+      key: 'createdDate', 
+      header: (
+        <button 
+          onClick={() => handleSort('createdDate')}
+          className="flex items-center font-medium hover:text-foreground transition-colors"
+        >
+          Created Date
+          {getSortIcon('createdDate')}
+        </button>
+      ),
+      render: (item: typeof topUpSchedules[0]) => {
+        const createdDate = new Date(item.created_at);
+        const hour = createdDate.getHours();
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const minutes = String(createdDate.getMinutes()).padStart(2, '0');
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-foreground">
+              {createdDate.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+              })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {hour12}:{minutes} {ampm}
+            </span>
+          </div>
+        );
+      }
     },
   ];
 
@@ -1039,8 +1108,8 @@ export default function TopUpManagement() {
               </div>
             </div>
             
-            {/* Type and Status Filters */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Type, Status, and Creation Date Filters */}
+            <div className="grid grid-cols-3 gap-4">
               {/* Top Up Type Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Top Up Type</label>
@@ -1173,11 +1242,87 @@ export default function TopUpManagement() {
                   </PopoverContent>
                 </Popover>
               </div>
+
+              {/* Creation Date Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Creation Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant={filterRecentlyCreated || createdDateFrom || createdDateTo ? 'default' : 'outline'} 
+                      className="w-full justify-between"
+                    >
+                      <span className="text-sm">
+                        {filterRecentlyCreated ? 'Recently Created' : (createdDateFrom || createdDateTo) ? 'Custom Range' : 'All Time'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-3">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="recently-created"
+                          checked={filterRecentlyCreated}
+                          onCheckedChange={(checked) => {
+                            setFilterRecentlyCreated(!!checked);
+                            if (checked) {
+                              setCreatedDateFrom('');
+                              setCreatedDateTo('');
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="recently-created"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          Recently Created (Last 7 days)
+                        </label>
+                      </div>
+                      <div className="border-t pt-3">
+                        <Label className="text-xs text-muted-foreground mb-2 block">Custom Date Range</Label>
+                        <div className="space-y-2">
+                          <DateInput
+                            value={createdDateFrom}
+                            onChange={(date) => {
+                              setCreatedDateFrom(date);
+                              setFilterRecentlyCreated(false);
+                            }}
+                            placeholder="From date"
+                          />
+                          <DateInput
+                            value={createdDateTo}
+                            onChange={(date) => {
+                              setCreatedDateTo(date);
+                              setFilterRecentlyCreated(false);
+                            }}
+                            placeholder="To date"
+                            minDate={createdDateFrom ? new Date(createdDateFrom) : undefined}
+                          />
+                        </div>
+                        {(createdDateFrom || createdDateTo) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setCreatedDateFrom('');
+                              setCreatedDateTo('');
+                            }}
+                            className="w-full mt-2 h-7 text-xs"
+                          >
+                            Clear Dates
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             
             {/* Date Range Filters */}
             <div className="space-y-3">
-              <label className="text-sm font-medium">Filter by Date Range</label>
+              <label className="text-sm font-medium">Filter by Scheduled Date</label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
