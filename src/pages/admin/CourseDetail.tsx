@@ -788,7 +788,7 @@ export default function CourseDetail() {
                         },
                         education_level: {
                           icon: <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />,
-                          value: course.education_level ? educationLevelLabels[course.education_level] : 'Not Set',
+                          value: 'Not Set',
                         },
                         mode_of_training: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
