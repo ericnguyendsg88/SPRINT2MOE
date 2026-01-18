@@ -14,34 +14,16 @@ const EDUCATION_LEVEL_PRIORITY = {
 
 /**
  * Determines the student's education level based on their active enrollments
- * Returns the highest education level among all active courses
- * Uses the course's education_level field directly from the database
+ * Note: Since courses don't have an education_level field, this returns null
+ * and education level should be managed manually on the account holder
  */
 export function determineEducationLevel(
   activeEnrollments: EnrollmentWithCourse[],
   providers: CourseProvider[]
 ): 'primary' | 'secondary' | 'post_secondary' | 'tertiary' | 'postgraduate' | null {
-  if (activeEnrollments.length === 0) {
-    return null;
-  }
-
-  let highestLevel: 'primary' | 'secondary' | 'post_secondary' | 'tertiary' | 'postgraduate' | null = null;
-  let highestPriority = 0;
-
-  for (const enrollment of activeEnrollments) {
-    // Use the education_level directly from the course
-    const courseLevel = enrollment.courses?.education_level as keyof typeof EDUCATION_LEVEL_PRIORITY | null;
-    
-    if (courseLevel && courseLevel in EDUCATION_LEVEL_PRIORITY) {
-      const priority = EDUCATION_LEVEL_PRIORITY[courseLevel];
-      if (priority > highestPriority) {
-        highestPriority = priority;
-        highestLevel = courseLevel;
-      }
-    }
-  }
-
-  return highestLevel;
+  // Courses don't have education_level field, so we can't determine from enrollments
+  // Education level is managed directly on the account holder
+  return null;
 }
 
 /**
