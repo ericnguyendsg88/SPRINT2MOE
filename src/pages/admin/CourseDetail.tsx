@@ -232,15 +232,6 @@ export default function CourseDetail() {
 
   const courseFieldsConfig = getFieldConfig('course-details', defaultCourseFields) as FieldDefinition[];
 
-  const handleToggleCourseStatus = async () => {
-    if (!course) return;
-    const newStatus = course.status === 'active' ? 'inactive' : 'active';
-    await updateCourseMutation.mutateAsync({
-      id: course.id,
-      status: newStatus,
-    });
-  };
-
   // Edit form state
   const [editName, setEditName] = useState('');
   const [editProvider, setEditProvider] = useState('');
@@ -572,56 +563,6 @@ export default function CourseDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant={course.status === 'active' ? 'outline' : 'default'}
-                      size="sm"
-                      className={course.status === 'active' ? 'text-warning border-warning/30 hover:bg-warning/10' : 'bg-green-600 hover:bg-green-700 text-white'}
-                    >
-                      {course.status === 'active' ? (
-                        <>
-                          <Ban className="h-4 w-4 mr-2" />
-                          Set as Inactive
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          Set as Active
-                        </>
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {course.status === 'active' ? 'Set Course as Inactive' : 'Set Course as Active'}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {course.status === 'active' ? (
-                          <>
-                            Are you sure you want to set "{course.name}" as inactive?
-                            This will prevent new student enrollments, but existing enrollments will remain active.
-                          </>
-                        ) : (
-                          <>
-                            Are you sure you want to set "{course.name}" as active?
-                            This will allow new student enrollments again.
-                          </>
-                        )}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleToggleCourseStatus}
-                        className={course.status === 'active' ? 'bg-warning text-white hover:bg-warning/90' : 'bg-green-600 text-white hover:bg-green-700'}
-                      >
-                        {updateCourseMutation.isPending ? 'Updating...' : (course.status === 'active' ? 'Set as Inactive' : 'Set as Active')}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
                 {isEditing ? (
                   <>
                     <Button variant="outline" onClick={cancelEditing}>
