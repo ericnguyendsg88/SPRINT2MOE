@@ -244,6 +244,7 @@ export default function CourseDetail() {
   // Edit form state
   const [editName, setEditName] = useState('');
   const [editProvider, setEditProvider] = useState('');
+  const [editEducationLevel, setEditEducationLevel] = useState('');
   const [editModeOfTraining, setEditModeOfTraining] = useState('');
   const [editCourseRunStart, setEditCourseRunStart] = useState('');
   const [editCourseRunEnd, setEditCourseRunEnd] = useState('');
@@ -255,6 +256,7 @@ export default function CourseDetail() {
     if (!course) return;
     setEditName(course.name);
     setEditProvider(course.provider);
+    setEditEducationLevel(course.education_level || '');
     setEditModeOfTraining(course.mode_of_training || 'online');
     setEditCourseRunStart(course.course_run_start || '');
     setEditCourseRunEnd(course.course_run_end || '');
@@ -298,6 +300,7 @@ export default function CourseDetail() {
       id: course.id,
       name: editName,
       provider: editProvider,
+      education_level: editEducationLevel || null,
       mode_of_training: editModeOfTraining,
       course_run_start: editCourseRunStart || null,
       course_run_end: editCourseRunEnd || null,
@@ -742,6 +745,21 @@ export default function CourseDetail() {
                         />
                       </div>
                       <div className="grid gap-2">
+                        <Label>Education Level</Label>
+                        <Select value={editEducationLevel} onValueChange={setEditEducationLevel}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select education level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="primary">Primary</SelectItem>
+                            <SelectItem value="secondary">Secondary</SelectItem>
+                            <SelectItem value="post_secondary">Post-Secondary</SelectItem>
+                            <SelectItem value="tertiary">Tertiary</SelectItem>
+                            <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
                         <Label>Mode of Training</Label>
                         <Select value={editModeOfTraining} onValueChange={setEditModeOfTraining}>
                           <SelectTrigger>
@@ -837,7 +855,7 @@ export default function CourseDetail() {
                         },
                         education_level: {
                           icon: <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />,
-                          value: 'Not Set',
+                          value: course.education_level ? educationLevelLabels[course.education_level] : 'Not Set',
                         },
                         mode_of_training: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
