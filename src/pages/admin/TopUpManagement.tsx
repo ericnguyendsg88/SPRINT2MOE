@@ -11,6 +11,7 @@ import { useAccountHolders, useUpdateAccountHolder } from '@/hooks/useAccountHol
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { useCreateTransaction } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/lib/utils';
+import { isEducationAccount } from '@/lib/accountTypeUtils';
 import {
   Dialog,
   DialogContent,
@@ -249,12 +250,16 @@ export default function TopUpManagement() {
   };
 
   const filteredAccountHolders = useMemo(() => {
-    if (!accountSearch.trim()) return accountHolders.filter(a => a.status === 'active');
+    // Only Education Accounts can receive top-ups (Student Accounts don't have balance)
+    const educationAccounts = accountHolders.filter(a => 
+      a.status === 'active' && isEducationAccount(a.account_type, a.residential_status)
+    );
+    
+    if (!accountSearch.trim()) return educationAccounts;
     const searchLower = accountSearch.toLowerCase().trim();
-    return accountHolders.filter(a => 
-      a.status === 'active' && 
-      (a.name.toLowerCase().includes(searchLower) || 
-       a.nric.toLowerCase().includes(searchLower))
+    return educationAccounts.filter(a => 
+      a.name.toLowerCase().includes(searchLower) || 
+      a.nric.toLowerCase().includes(searchLower)
     );
   }, [accountSearch, accountHolders]);
 
@@ -265,7 +270,10 @@ export default function TopUpManagement() {
 
   // Filter accounts based on batch targeting criteria
   const getTargetedAccounts = (): typeof accountHolders => {
-    let targeted = accountHolders.filter(a => a.status === 'active');
+    // Only Education Accounts can receive top-ups
+    let targeted = accountHolders.filter(a => 
+      a.status === 'active' && isEducationAccount(a.account_type, a.residential_status)
+    );
 
     if (batchTargeting === 'everyone') {
       return targeted;
@@ -321,12 +329,17 @@ export default function TopUpManagement() {
       const data = JSON.parse(remarks);
       const { targetingType, criteria } = data;
       
+      // Only Education Accounts can receive top-ups
       if (targetingType === 'everyone') {
-        return accountHolders.filter(a => a.status === 'active');
+        return accountHolders.filter(a => 
+          a.status === 'active' && isEducationAccount(a.account_type, a.residential_status)
+        );
       }
       
-      // Apply customized criteria
-      let targeted = accountHolders.filter(a => a.status === 'active');
+      // Apply customized criteria - start with Education Accounts only
+      let targeted = accountHolders.filter(a => 
+        a.status === 'active' && isEducationAccount(a.account_type, a.residential_status)
+      );
       
       // Age range filter
       if (criteria.minAge || criteria.maxAge) {
@@ -1962,7 +1975,7 @@ export default function TopUpManagement() {
             {batchTargeting === 'everyone' && (
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  All active accounts will be targeted: <span className="font-semibold text-foreground">{accountHolders.filter(a => a.status === 'active').length}</span>
+                  All Education Accounts will be targeted: <span className="font-semibold text-foreground">{accountHolders.filter(a => a.status === 'active' && isEducationAccount(a.account_type, a.residential_status)).length}</span>
                 </p>
               </div>
             )}

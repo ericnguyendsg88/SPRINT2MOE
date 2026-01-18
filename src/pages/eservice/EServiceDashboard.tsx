@@ -19,6 +19,7 @@ import { ColumnEditor } from '@/components/editor/ColumnEditor';
 import { ColumnDefinition, LayoutItem } from '@/hooks/usePageLayout';
 import { formatDate } from '@/lib/dateUtils';
 import { formatCurrency } from '@/lib/utils';
+import { isEducationAccount } from '@/lib/accountTypeUtils';
 
 const SECTION_IDS = ['welcome', 'stats', 'courses'];
 
@@ -362,14 +363,17 @@ export default function EServiceDashboard() {
           onSizeChange={(size) => updateSectionSize(item.id, size)}
           isEditMode={isEditMode}
         >
-          <div className="grid gap-4 md:grid-cols-3">
-            <StatCard
-              title="Account Balance"
-              value={`$${formatCurrency(Number(currentUser.balance))}`}
-              subtitle="Available for course fees"
-              icon={Wallet}
-              variant="success"
-            />
+          <div className={`grid gap-4 ${isEducationAccount(currentUser.account_type, currentUser.residential_status) ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+            {/* Account Balance - only for Education Accounts */}
+            {isEducationAccount(currentUser.account_type, currentUser.residential_status) && (
+              <StatCard
+                title="Account Balance"
+                value={`$${formatCurrency(Number(currentUser.balance))}`}
+                subtitle="Available for course fees"
+                icon={Wallet}
+                variant="success"
+              />
+            )}
             <StatCard
               title="Active Courses"
               value={activeEnrollments.length}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, ArrowUpRight, CreditCard, Calendar, DollarSign, X, ChevronDown, Check } from 'lucide-react';
+import { Search, Filter, ArrowUpRight, CreditCard, Calendar, DollarSign, X, ChevronDown, Check, AlertCircle } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { useAccountHolders } from '@/hooks/useAccountHolders';
 import { useTransactionsByAccount, Transaction } from '@/hooks/useTransactions';
 import { useCurrentUser } from '@/contexts/CurrentUserContext';
 import { formatDate } from '@/lib/dateUtils';
+import { isEducationAccount, getAccountTypeLabel } from '@/lib/accountTypeUtils';
 import {
   Select,
   SelectContent,
@@ -81,6 +82,27 @@ export default function AccountBalance() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Student Accounts don't have balance - redirect them
+  if (!isEducationAccount(currentUser.account_type, currentUser.residential_status)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-foreground">Account Balance Not Available</h2>
+          <p className="text-muted-foreground mt-1">
+            {getAccountTypeLabel(currentUser.account_type, currentUser.residential_status)}s do not have an account balance.
+          </p>
+          <p className="text-muted-foreground text-sm mt-2">
+            Course fees are paid directly through external payment methods.
+          </p>
+        </div>
+        <Button onClick={() => navigate('/eservice/fees')}>
+          View Your Courses
+        </Button>
       </div>
     );
   }

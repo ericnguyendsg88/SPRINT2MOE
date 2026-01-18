@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, ArrowUp, Pencil, HelpCircle, Check } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, ArrowUp, Pencil, HelpCircle, Check, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -14,6 +14,7 @@ import { usePageLayout, SectionSize, ColumnDefinition, LayoutItem } from '@/hook
 import { formatDate } from '@/lib/dateUtils';
 import { formatTime } from '@/lib/dateUtils';
 import { formatCurrency } from '@/lib/utils';
+import { isEducationAccount, getAccountTypeLabel, getAccountTypeBadgeClass, getAccountInfoTitle, canReceiveTopUp } from '@/lib/accountTypeUtils';
 import { Input } from '@/components/ui/input';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
@@ -663,20 +664,23 @@ export default function StudentDetail() {
             size={sectionSize}
             onSizeChange={(size) => updateSectionSize(sectionId, size)}
           >
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                      <CreditCard className="h-6 w-6 text-accent" />
+            <div className={`grid gap-4 ${isEducationAccount(account.account_type, account.residential_status) ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+              {/* Balance card - only show for Education Accounts */}
+              {isEducationAccount(account.account_type, account.residential_status) && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
+                        <Wallet className="h-6 w-6 text-accent" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Balance</p>
+                        <p className="text-2xl font-bold text-foreground">${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Balance</p>
-                      <p className="text-2xl font-bold text-foreground">${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardContent className="pt-6">
@@ -726,7 +730,7 @@ export default function StudentDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5 text-primary" />
-                  Student Information
+                  {getAccountInfoTitle(account.account_type, account.residential_status)}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -888,6 +892,10 @@ export default function StudentDetail() {
         );
 
       case 'top-up-history':
+        // Hide top-up history for Student Accounts (they don't have balance/top-ups)
+        if (!isEducationAccount(account.account_type, account.residential_status)) {
+          return null;
+        }
         return (
           <ResizableSection 
             key={sectionId} 
@@ -1025,7 +1033,12 @@ export default function StudentDetail() {
                 {accountActiveStatus === 'active' ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <p className="text-muted-foreground">{account.nric}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-muted-foreground">{account.nric}</p>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getAccountTypeBadgeClass(account.account_type, account.residential_status)}`}>
+                {getAccountTypeLabel(account.account_type, account.residential_status)}
+              </span>
+            </div>
           </div>
         </div>
         

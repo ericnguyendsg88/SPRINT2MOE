@@ -12,6 +12,7 @@ import { useEnrollments } from '@/hooks/useEnrollments';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseCharges } from '@/hooks/useCourseCharges';
 import { formatDate, formatTime } from '@/lib/dateUtils';
+import { getAccountTypeLabel, getAccountTypeBadgeClass, isEducationAccount } from '@/lib/accountTypeUtils';
 import {
   Select,
   SelectContent,
@@ -330,6 +331,9 @@ export default function AccountManagement() {
     }
 
     try {
+      // Determine account type based on residential status
+      const accountType = residentialStatus === 'sc' ? 'education' : 'student';
+      
       await createAccountMutation.mutateAsync({
         nric: nric.trim(),
         name: fullName.trim(),
@@ -338,12 +342,13 @@ export default function AccountManagement() {
         phone: phone.trim() || null,
         residential_address: residentialAddress.trim() || null,
         mailing_address: mailingAddress.trim() || null,
-        balance: 0,
+        balance: accountType === 'education' ? 0 : 0, // Student accounts always have 0 balance
         status: 'active',
         in_school: 'not_in_school',
         education_level: null,
         continuing_learning: null,
         residential_status: (residentialStatus || 'sc') as any,
+        account_type: accountType as 'education' | 'student',
       });
       resetForm();
       setIsAddStudentOpen(false);
@@ -404,7 +409,18 @@ export default function AccountManagement() {
       ),
       render: (account: typeof accountHolders[0]) => (
         <span className="font-semibold text-foreground">
-          ${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          {isEducationAccount(account.account_type, account.residential_status) 
+            ? `$${Number(account.balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+            : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'account_type',
+      header: 'Account Type',
+      render: (account: typeof accountHolders[0]) => (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getAccountTypeBadgeClass(account.account_type, account.residential_status)}`}>
+          {getAccountTypeLabel(account.account_type, account.residential_status)}
         </span>
       ),
     },

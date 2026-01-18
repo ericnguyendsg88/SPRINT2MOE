@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAccountHolders } from '@/hooks/useAccountHolders';
 import { useCurrentUser } from '@/contexts/CurrentUserContext';
+import { isEducationAccount, getAccountTypeLabel, getAccountTypeBadgeClass } from '@/lib/accountTypeUtils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,17 +20,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const menuItems = [
+// Base menu items - Account Balance will be conditionally added for Education Accounts only
+const baseMenuItems = [
   { 
     label: 'Dashboard', 
     icon: Home, 
     path: '/eservice',
     exact: true 
-  },
-  { 
-    label: 'Account Balance', 
-    icon: Wallet, 
-    path: '/eservice/balance' 
   },
   { 
     label: 'Your Courses', 
@@ -48,6 +45,13 @@ const menuItems = [
   },
 ];
 
+// Account Balance menu item - only for Education Accounts
+const accountBalanceMenuItem = { 
+  label: 'Account Balance', 
+  icon: Wallet, 
+  path: '/eservice/balance' 
+};
+
 export function EServiceSidebar() {
   const location = useLocation();
   const { data: accountHolders = [] } = useAccountHolders();
@@ -55,6 +59,12 @@ export function EServiceSidebar() {
   
   // Get current user based on context
   const currentUser = accountHolders.find(u => u.id === currentUserId) || accountHolders[0];
+
+  // Build menu items based on account type
+  // Education Accounts see Account Balance, Student Accounts don't
+  const menuItems = currentUser && isEducationAccount(currentUser.account_type, currentUser.residential_status)
+    ? [baseMenuItems[0], accountBalanceMenuItem, ...baseMenuItems.slice(1)]
+    : baseMenuItems;
 
   const isActive = (path: string, exact?: boolean) => {
     if (exact) {

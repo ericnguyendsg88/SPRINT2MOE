@@ -17,6 +17,7 @@ export interface AccountHolder {
   education_level: 'primary' | 'secondary' | 'post_secondary' | 'tertiary' | 'postgraduate' | null;
   continuing_learning: 'active' | 'inactive' | 'completed' | null;
   residential_status: 'sc' | 'pr' | 'non_resident';
+  account_type: 'education' | 'student';
   created_at: string;
   updated_at: string;
   closed_at: string | null;

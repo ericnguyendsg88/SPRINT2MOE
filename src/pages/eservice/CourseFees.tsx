@@ -10,6 +10,7 @@ import { useCreateTransaction } from '@/hooks/useTransactions';
 import { useEnrollmentsByAccount } from '@/hooks/useEnrollments';
 import { useCourses } from '@/hooks/useCourses';
 import { useCurrentUser } from '@/contexts/CurrentUserContext';
+import { isEducationAccount, canUseBalance, canUseCombinedPayment } from '@/lib/accountTypeUtils';
 import {
   Dialog,
   DialogContent,
@@ -154,16 +155,26 @@ export default function CourseFees() {
   // Reset form when dialog opens
   useEffect(() => {
     if (selectedCharge && isPaymentDialogOpen && currentUser) {
-      const defaultBalanceAmount = Math.min(Number(currentUser.balance), Number(selectedCharge.amount));
-      setBalanceAmount(defaultBalanceAmount.toFixed(2));
-      setUseAccountBalance(defaultBalanceAmount > 0);
-      setExternalMethod('');
-      setExternalAmount(Math.max(0, Number(selectedCharge.amount) - defaultBalanceAmount).toFixed(2));
+      // For Student Accounts: no balance, must pay full amount externally
+      if (!canUseBalance(currentUser.account_type, currentUser.residential_status)) {
+        setBalanceAmount('0');
+        setUseAccountBalance(false);
+        setExternalMethod('');
+        setExternalAmount(Number(selectedCharge.amount).toFixed(2));
+      } else {
+        // Education Accounts: can use balance
+        const defaultBalanceAmount = Math.min(Number(currentUser.balance), Number(selectedCharge.amount));
+        setBalanceAmount(defaultBalanceAmount.toFixed(2));
+        setUseAccountBalance(defaultBalanceAmount > 0);
+        setExternalMethod('');
+        setExternalAmount(Math.max(0, Number(selectedCharge.amount) - defaultBalanceAmount).toFixed(2));
+      }
     }
   }, [selectedCharge, isPaymentDialogOpen, currentUser]);
 
-  // No longer auto-update external amount - user controls it
-  const totalPaymentAmount = (useAccountBalance ? balanceAmountNum : 0) + (parseFloat(externalAmount) || 0);
+  // Calculate total payment - Student Accounts can only use external payment
+  const canUseAccountBalance = currentUser && canUseBalance(currentUser.account_type, currentUser.residential_status);
+  const totalPaymentAmount = (useAccountBalance && canUseAccountBalance ? balanceAmountNum : 0) + (parseFloat(externalAmount) || 0);
 
   const handlePayment = (charge: CourseCharge) => {
     setSelectedCharge(charge);
@@ -172,22 +183,38 @@ export default function CourseFees() {
 
   const handlePayAll = () => {
     if (!currentUser) return;
-    const defaultBalanceAmount = Math.min(Number(currentUser.balance), totalOutstanding);
-    setPayAllBalanceAmount(defaultBalanceAmount.toFixed(2));
-    setPayAllUseBalance(true);
-    setPayAllExternalMethod('');
+    
+    // For Student Accounts: no balance, must pay full amount externally
+    if (!canUseBalance(currentUser.account_type, currentUser.residential_status)) {
+      setPayAllBalanceAmount('0');
+      setPayAllUseBalance(false);
+      setPayAllExternalMethod('');
+    } else {
+      // Education Accounts: can use balance
+      const defaultBalanceAmount = Math.min(Number(currentUser.balance), totalOutstanding);
+      setPayAllBalanceAmount(defaultBalanceAmount.toFixed(2));
+      setPayAllUseBalance(true);
+      setPayAllExternalMethod('');
+    }
     setIsPayAllDialogOpen(true);
   };
 
   const payAllBalanceAmountNum = parseFloat(payAllBalanceAmount) || 0;
-  const payAllMaxBalanceUsable = currentUser ? Math.min(Number(currentUser.balance), totalOutstanding) : 0;
-  const payAllRemainingAmount = Math.max(0, totalOutstanding - payAllBalanceAmountNum);
+  // For Student Accounts, max balance usable is 0
+  const payAllMaxBalanceUsable = canUseAccountBalance && currentUser 
+    ? Math.min(Number(currentUser.balance), totalOutstanding) 
+    : 0;
+  // For Student Accounts, remaining is always the full amount
+  const payAllRemainingAmount = canUseAccountBalance 
+    ? Math.max(0, totalOutstanding - (payAllUseBalance ? payAllBalanceAmountNum : 0))
+    : totalOutstanding;
 
   const processPayAll = async () => {
     if (!currentUser || pendingCharges.length === 0 || isProcessing) return;
 
-    const balancePaid = payAllUseBalance ? payAllBalanceAmountNum : 0;
-    const externalPaid = payAllRemainingAmount;
+    // For Student Accounts, balance is always 0
+    const balancePaid = (payAllUseBalance && canUseAccountBalance) ? payAllBalanceAmountNum : 0;
+    const externalPaid = totalOutstanding - balancePaid;
     const totalPaid = balancePaid + externalPaid;
 
     if (totalPaid < totalOutstanding) {
@@ -195,13 +222,13 @@ export default function CourseFees() {
       return;
     }
 
-    if (balancePaid > Number(currentUser.balance)) {
+    if (balancePaid > 0 && balancePaid > Number(currentUser.balance)) {
       toast.error('Insufficient account balance');
       return;
     }
 
     if (externalPaid > 0 && !payAllExternalMethod) {
-      toast.error('Please select an external payment method');
+      toast.error('Please select a payment method');
       return;
     }
 
@@ -273,7 +300,8 @@ export default function CourseFees() {
   const processPayment = async () => {
     if (!selectedCharge || !currentUser || isProcessing) return;
 
-    const balancePaid = useAccountBalance ? balanceAmountNum : 0;
+    // For Student Accounts, balance is always 0
+    const balancePaid = (useAccountBalance && canUseAccountBalance) ? balanceAmountNum : 0;
     const externalPaid = parseFloat(externalAmount) || 0;
     const totalPaid = balancePaid + externalPaid;
     const chargeTotal = Number(selectedCharge.amount);
@@ -283,7 +311,7 @@ export default function CourseFees() {
       return;
     }
 
-    if (balancePaid > Number(currentUser.balance)) {
+    if (balancePaid > 0 && balancePaid > Number(currentUser.balance)) {
       toast.error('Insufficient account balance');
       return;
     }
@@ -952,46 +980,56 @@ export default function CourseFees() {
                 <span className="text-muted-foreground">Amount Due</span>
                 <span className="font-bold text-foreground">${chargeAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Your Balance</span>
-                <span className="font-medium text-foreground">${Number(currentUser.balance).toFixed(2)}</span>
-              </div>
+              {/* Only show balance for Education Accounts */}
+              {canUseAccountBalance && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Your Balance</span>
+                  <span className="font-medium text-foreground">${Number(currentUser.balance).toFixed(2)}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="useBalance"
-                  checked={useAccountBalance}
-                  onCheckedChange={(checked) => setUseAccountBalance(!!checked)}
-                  disabled={Number(currentUser.balance) === 0}
-                />
-                <Label htmlFor="useBalance" className="text-sm font-medium">
-                  Use Account Balance
-                </Label>
-              </div>
+              {/* Account Balance option - only for Education Accounts */}
+              {canUseAccountBalance && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="useBalance"
+                      checked={useAccountBalance}
+                      onCheckedChange={(checked) => setUseAccountBalance(!!checked)}
+                      disabled={Number(currentUser.balance) === 0}
+                    />
+                    <Label htmlFor="useBalance" className="text-sm font-medium">
+                      Use Account Balance
+                    </Label>
+                  </div>
 
-              {useAccountBalance && (
-                <div className="space-y-2">
-                  <Label>Amount from Balance (max: ${maxBalanceUsable.toFixed(2)})</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={maxBalanceUsable}
-                    step="0.01"
-                    value={balanceAmount}
-                    onChange={(e) => {
-                      const val = Math.min(parseFloat(e.target.value) || 0, maxBalanceUsable);
-                      setBalanceAmount(val.toFixed(2));
-                    }}
-                  />
-                </div>
+                  {useAccountBalance && (
+                    <div className="space-y-2">
+                      <Label>Amount from Balance (max: ${maxBalanceUsable.toFixed(2)})</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={maxBalanceUsable}
+                        step="0.01"
+                        value={balanceAmount}
+                        onChange={(e) => {
+                          const val = Math.min(parseFloat(e.target.value) || 0, maxBalanceUsable);
+                          setBalanceAmount(val.toFixed(2));
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
-              <div className="border-t border-border pt-4">
+              <div className={canUseAccountBalance ? "border-t border-border pt-4" : ""}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium">External Payment</p>
-                  {remainingAmount > 0 && (
+                  <p className="text-sm font-medium">
+                    {canUseAccountBalance ? 'External Payment' : 'Payment Method'}
+                  </p>
+                  {canUseAccountBalance && remainingAmount > 0 && (
                     <p className="text-sm text-muted-foreground">
                       Remaining: <span className="font-semibold text-foreground">${remainingAmount.toFixed(2)}</span>
                     </p>
@@ -1068,49 +1106,60 @@ export default function CourseFees() {
                 <span className="text-muted-foreground">Total Outstanding</span>
                 <span className="font-bold text-foreground">${totalOutstanding.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Your Balance</span>
-                <span className="font-medium text-foreground">${Number(currentUser.balance).toFixed(2)}</span>
-              </div>
+              {/* Only show balance for Education Accounts */}
+              {canUseAccountBalance && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Your Balance</span>
+                  <span className="font-medium text-foreground">${Number(currentUser.balance).toFixed(2)}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="useBalanceAll"
-                  checked={payAllUseBalance}
-                  onCheckedChange={(checked) => setPayAllUseBalance(!!checked)}
-                  disabled={Number(currentUser.balance) === 0}
-                />
-                <Label htmlFor="useBalanceAll" className="text-sm font-medium">
-                  Use Account Balance
-                </Label>
-              </div>
+              {/* Account Balance option - only for Education Accounts */}
+              {canUseAccountBalance && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="useBalanceAll"
+                      checked={payAllUseBalance}
+                      onCheckedChange={(checked) => setPayAllUseBalance(!!checked)}
+                      disabled={Number(currentUser.balance) === 0}
+                    />
+                    <Label htmlFor="useBalanceAll" className="text-sm font-medium">
+                      Use Account Balance
+                    </Label>
+                  </div>
 
-              {payAllUseBalance && (
-                <div className="space-y-2">
-                  <Label>Amount from Balance (max: ${payAllMaxBalanceUsable.toFixed(2)})</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max={payAllMaxBalanceUsable}
-                    step="0.01"
-                    value={payAllBalanceAmount}
-                    onChange={(e) => {
-                      const val = Math.min(parseFloat(e.target.value) || 0, payAllMaxBalanceUsable);
-                      setPayAllBalanceAmount(val.toFixed(2));
-                    }}
-                  />
-                </div>
+                  {payAllUseBalance && (
+                    <div className="space-y-2">
+                      <Label>Amount from Balance (max: ${payAllMaxBalanceUsable.toFixed(2)})</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={payAllMaxBalanceUsable}
+                        step="0.01"
+                        value={payAllBalanceAmount}
+                        onChange={(e) => {
+                          const val = Math.min(parseFloat(e.target.value) || 0, payAllMaxBalanceUsable);
+                          setPayAllBalanceAmount(val.toFixed(2));
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
-              {payAllRemainingAmount > 0 && (
-                <div className="border-t border-border pt-4">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Remaining amount: <span className="font-semibold text-foreground">${payAllRemainingAmount.toFixed(2)}</span>
-                  </p>
+              {/* External payment - for Student Accounts always show, for Education show if remaining */}
+              {(!canUseAccountBalance || payAllRemainingAmount > 0) && (
+                <div className={canUseAccountBalance ? "border-t border-border pt-4" : ""}>
+                  {canUseAccountBalance && (
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Remaining amount: <span className="font-semibold text-foreground">${payAllRemainingAmount.toFixed(2)}</span>
+                    </p>
+                  )}
                   <div className="space-y-2">
-                    <Label>External Payment Method</Label>
+                    <Label>{canUseAccountBalance ? 'External Payment Method' : 'Payment Method'}</Label>
                     <Select value={payAllExternalMethod} onValueChange={setPayAllExternalMethod}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select payment method" />
