@@ -1184,17 +1184,6 @@ export default function StudentDetail() {
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label>Education Level</Label>
-              <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md border">
-                <span className="text-sm text-muted-foreground">
-                  {account?.education_level ? educationLevelLabels[account.education_level] : 'Not Set'}
-                </span>
-                <span className="text-xs text-muted-foreground italic">(Auto-determined by enrolled courses)</span>
-              </div>
-            </div>
-
-
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                 Cancel
