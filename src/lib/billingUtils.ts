@@ -1,8 +1,9 @@
 /**
- * Pro-Rated Billing Utility
+ * Billing Utility
  * 
- * Calculates pro-rated fees for mid-period enrollments across all billing cycles.
- * Formula: (Full Fee / Total Days in Billing Period) x Days Remaining in Period
+ * Handles billing calculations for course fees.
+ * Note: Pro-rating has been disabled - students pay the full billing cycle fee
+ * regardless of when they enroll during the period.
  */
 
 type BillingCycle = 'monthly' | 'quarterly' | 'biannually' | 'yearly' | 'one_time';
@@ -174,13 +175,16 @@ export function shouldProrateCharge(
 }
 
 /**
- * Calculate pro-rated fee for the first billing cycle
+ * Calculate fee for the first billing cycle
+ * 
+ * Note: Pro-rating has been disabled. Students pay the full billing cycle fee
+ * regardless of when they enroll in the course.
  * 
  * @param fullFee - The full billing period fee (monthly/quarterly/biannual/yearly)
  * @param enrollmentDate - The date the student enrolls
  * @param courseStartDate - The course start date (optional)
  * @param billingCycle - The billing cycle type
- * @returns The pro-rated fee amount (rounded to 2 decimal places)
+ * @returns The full fee amount
  */
 export function calculateProratedFee(
   fullFee: number,
@@ -188,20 +192,8 @@ export function calculateProratedFee(
   courseStartDate: string | null,
   billingCycle: BillingCycle
 ): number {
-  // Check if pro-rating applies
-  if (!shouldProrateCharge(enrollmentDate, courseStartDate, billingCycle)) {
-    return fullFee;
-  }
-
-  const { periodStart, periodEnd } = getBillingPeriodDates(enrollmentDate, courseStartDate, billingCycle);
-  const totalDays = getTotalDaysInBillingPeriod(periodStart, periodEnd);
-  const daysRemaining = getDaysRemainingInBillingPeriod(enrollmentDate, periodEnd);
-  
-  // Calculate pro-rated amount
-  const proratedFee = (fullFee / totalDays) * daysRemaining;
-  
-  // Round to 2 decimal places
-  return Math.round(proratedFee * 100) / 100;
+  // Always return the full fee - no pro-rating
+  return fullFee;
 }
 
 /**
@@ -219,7 +211,10 @@ export function getBillingCycleLabel(billingCycle: BillingCycle): string {
 }
 
 /**
- * Get pro-rating information for display
+ * Get billing information for display
+ * 
+ * Note: Pro-rating has been disabled. This function now always returns
+ * the full fee regardless of enrollment date.
  */
 export function getProratingInfo(
   fullFee: number,
@@ -240,17 +235,15 @@ export function getProratingInfo(
   const { periodStart, periodEnd } = getBillingPeriodDates(enrollmentDate, courseStartDate, billingCycle);
   const totalDays = getTotalDaysInBillingPeriod(periodStart, periodEnd);
   const daysRemaining = getDaysRemainingInBillingPeriod(enrollmentDate, periodEnd);
-  const isProrated = shouldProrateCharge(enrollmentDate, courseStartDate, billingCycle);
-  const proratedFee = calculateProratedFee(fullFee, enrollmentDate, courseStartDate, billingCycle);
   const billingPeriodLabel = getBillingCycleLabel(billingCycle);
   
   return {
-    isProrated,
-    proratedFee,
+    isProrated: false, // Pro-rating is disabled
+    proratedFee: fullFee, // Always full fee
     fullFee,
     daysRemaining,
     totalDays,
-    savingsAmount: isProrated ? Math.round((fullFee - proratedFee) * 100) / 100 : 0,
+    savingsAmount: 0, // No savings since no pro-rating
     billingPeriodLabel,
     periodStart,
     periodEnd,

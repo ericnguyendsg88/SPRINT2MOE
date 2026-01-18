@@ -182,9 +182,9 @@ export default function CourseStudents() {
         status: 'active',
       });
 
-      // Auto-create course charge with pro-rated fee
+      // Auto-create course charge with full billing cycle fee
       const enrollmentDate = new Date();
-      const proratedAmount = calculateProratedFee(
+      const chargeAmount = calculateProratedFee(
         course.fee,
         enrollmentDate,
         course.course_run_start,
@@ -196,7 +196,7 @@ export default function CourseStudents() {
           account_id: selectedStudentId,
           course_id: course.id,
           course_name: course.name,
-          amount: proratedAmount,
+          amount: chargeAmount,
           amount_paid: 0,
           due_date: calculateDueDate(course.billing_date, course.billing_due_date, enrollmentDate),
           status: 'outstanding',
@@ -306,10 +306,10 @@ export default function CourseStudents() {
                 </Select>
               </div>
               
-              {/* Pro-rating Info */}
+              {/* Billing Fee Info */}
               {selectedStudentId && (() => {
                 const enrollmentDate = new Date();
-                const proRateInfo = getProratingInfo(
+                const billingInfo = getProratingInfo(
                   course.fee,
                   enrollmentDate,
                   course.course_run_start,
@@ -322,30 +322,12 @@ export default function CourseStudents() {
                       <Info className="h-4 w-4 text-primary" />
                       First Billing Period Fee
                     </div>
-                    {proRateInfo.isProrated ? (
-                      <>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Full {proRateInfo.billingPeriodLabel} fee:</span>
-                          <span className="line-through text-muted-foreground">${formatCurrency(proRateInfo.fullFee)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            Pro-rated ({proRateInfo.daysRemaining} of {proRateInfo.totalDays} days):
-                          </span>
-                          <span className="font-semibold text-foreground">${formatCurrency(proRateInfo.proratedFee)}</span>
-                        </div>
-                        <div className="text-xs text-success mt-1">
-                          Student saves ${formatCurrency(proRateInfo.savingsAmount)} this {proRateInfo.billingPeriodLabel}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Amount to charge:</span>
-                        <span className="font-semibold text-foreground">${formatCurrency(proRateInfo.fullFee)}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Amount to charge:</span>
+                      <span className="font-semibold text-foreground">${formatCurrency(billingInfo.fullFee)}</span>
+                    </div>
                     <p className="text-xs text-muted-foreground pt-1 border-t border-border">
-                      Subsequent {proRateInfo.billingPeriodLabel}s will be charged at the full rate of ${formatCurrency(course.fee)}
+                      Student will be charged the full {billingInfo.billingPeriodLabel} fee of ${formatCurrency(course.fee)} regardless of enrollment date. Subsequent {billingInfo.billingPeriodLabel}s will also be charged at the same rate.
                     </p>
                   </div>
                 );
