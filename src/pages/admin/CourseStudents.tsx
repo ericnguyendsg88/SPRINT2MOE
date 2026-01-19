@@ -135,12 +135,12 @@ export default function CourseStudents() {
   // Calculate due date based on enrollment date, course billing day settings, and billing cycle.
   // Uses the course's billing_date (day of month) and billing_due_date (days after billing) settings.
   const calculateDueDate = (
-    billingDayOfMonth: string | null, 
-    billingDueDaysAfter: string | null,
+    billingDayOfMonth: number | null, 
+    billingDueDaysAfter: number | null,
     enrollmentDate: Date = new Date()
   ): string => {
-    const billingDay = parseInt(billingDayOfMonth || '5') || 5; // Default to 5th
-    const dueDaysAfter = parseInt(billingDueDaysAfter || '30') || 30; // Default to 30 days
+    const billingDay = billingDayOfMonth ?? 5; // Default to 5th
+    const dueDaysAfter = billingDueDaysAfter ?? 30; // Default to 30 days
     
     // Get the billing date for the enrollment month
     const year = enrollmentDate.getFullYear();

@@ -147,8 +147,8 @@ export type Database = {
       courses: {
         Row: {
           billing_cycle: Database["public"]["Enums"]["billing_cycle"]
-          billing_date: string | null
-          billing_due_date: string | null
+          billing_date: number | null
+          billing_due_date: number | null
           course_run_end: string | null
           course_run_start: string | null
           created_at: string
@@ -167,8 +167,8 @@ export type Database = {
         }
         Insert: {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
-          billing_date?: string | null
-          billing_due_date?: string | null
+          billing_date?: number | null
+          billing_due_date?: number | null
           course_run_end?: string | null
           course_run_start?: string | null
           created_at?: string
@@ -187,8 +187,8 @@ export type Database = {
         }
         Update: {
           billing_cycle?: Database["public"]["Enums"]["billing_cycle"]
-          billing_date?: string | null
-          billing_due_date?: string | null
+          billing_date?: number | null
+          billing_due_date?: number | null
           course_run_end?: string | null
           course_run_start?: string | null
           created_at?: string

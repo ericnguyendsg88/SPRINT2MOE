@@ -17,8 +17,8 @@ export interface Course {
   course_run_end: string | null;
   intake_size: number | null;
   education_level: string | null;
-  billing_date: string | null;
-  billing_due_date: string | null;
+  billing_date: number | null;
+  billing_due_date: number | null;
   created_at: string;
   updated_at: string;
 }
