@@ -264,28 +264,7 @@ export default function CourseDetail() {
   const handleSave = async () => {
     if (!course) return;
     
-    // Validate course end date is not before course start
-    if (editCourseRunStart && editCourseRunEnd) {
-      if (new Date(editCourseRunEnd) < new Date(editCourseRunStart)) {
-        toast.error('Course end date cannot be before course start date');
-        return;
-      }
-    }
-
-    // Validate that course start is today or in the future (only if course hasn't started yet)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const originalStartDate = course.course_run_start ? new Date(course.course_run_start) : null;
-    const isCourseStarted = originalStartDate && originalStartDate <= today;
-    
-    if (!isCourseStarted && editCourseRunStart) {
-      const newStartDate = new Date(editCourseRunStart);
-      newStartDate.setHours(0, 0, 0, 0);
-      if (newStartDate < today) {
-        toast.error('Course start date must be today or a future date');
-        return;
-      }
-    }
+    // Note: Course Start and Course End dates are not editable as they impact financial aspects
     
     await updateCourseMutation.mutateAsync({
       id: course.id,
@@ -658,12 +637,6 @@ export default function CourseDetail() {
               </CardHeader>
               <CardContent>
                 {isEditing ? (() => {
-                  // Check if course start date has already been reached
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const courseStartDate = course.course_run_start ? new Date(course.course_run_start) : null;
-                  const isCourseStarted = courseStartDate && courseStartDate <= today;
-
                   return (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -731,28 +704,23 @@ export default function CourseDetail() {
                         <div className="grid gap-2">
                           <Label className="flex items-center gap-2">
                             Course Start
-                            {isCourseStarted && <Lock className="h-3 w-3 text-muted-foreground" />}
+                            <Lock className="h-3 w-3 text-muted-foreground" />
                           </Label>
-                          {isCourseStarted ? (
-                            <Input
-                              value={editCourseRunStart ? new Date(editCourseRunStart).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : ''}
-                              disabled
-                              className="bg-muted cursor-not-allowed"
-                            />
-                          ) : (
-                            <DateInput
-                              value={editCourseRunStart}
-                              onChange={setEditCourseRunStart}
-                              minDate={new Date()}
-                            />
-                          )}
+                          <Input
+                            value={editCourseRunStart ? new Date(editCourseRunStart).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                            disabled
+                            className="bg-muted cursor-not-allowed"
+                          />
                         </div>
                         <div className="grid gap-2">
-                          <Label>Course End</Label>
-                          <DateInput
-                            value={editCourseRunEnd}
-                            onChange={setEditCourseRunEnd}
-                            minDate={editCourseRunStart ? new Date(editCourseRunStart) : new Date()}
+                          <Label className="flex items-center gap-2">
+                            Course End
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          </Label>
+                          <Input
+                            value={editCourseRunEnd ? new Date(editCourseRunEnd).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                            disabled
+                            className="bg-muted cursor-not-allowed"
                           />
                         </div>
                       </div>

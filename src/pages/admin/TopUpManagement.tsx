@@ -1905,7 +1905,7 @@ export default function TopUpManagement() {
                       {getTargetedAccounts().length === 0 && (
                         <div className="flex items-center gap-1.5 text-destructive">
                           <AlertCircle className="h-4 w-4" />
-                          <span className="text-xs font-medium">Adjust filters</span>
+                          <span className="text-xs font-medium">No eligible accounts, adjust criteria to continue</span>
                         </div>
                       )}
                     </div>
