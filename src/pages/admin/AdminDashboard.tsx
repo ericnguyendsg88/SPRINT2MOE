@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wallet, Calendar, ArrowUpRight, ArrowDownRight, CircleDollarSign, Users, User, UserPlus, Activity, GraduationCap, Search } from 'lucide-react';
+import { Wallet, Calendar, ArrowUpRight, ArrowDownRight, CircleDollarSign, Users, User, UserPlus, Activity, GraduationCap, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,10 @@ export default function AdminDashboard() {
   const [eligibleAccountsSearch, setEligibleAccountsSearch] = useState('');
   const [selectedIndividualDetail, setSelectedIndividualDetail] = useState<typeof topUpSchedules[0] | null>(null);
   const [showIndividualDetailModal, setShowIndividualDetailModal] = useState(false);
+  const [batchTopUpsPage, setBatchTopUpsPage] = useState(1);
+  const [individualTopUpsPage, setIndividualTopUpsPage] = useState(1);
+  const [recentAccountsPage, setRecentAccountsPage] = useState(1);
+  const itemsPerPage = 5;
   
   const { data: topUpSchedules = [], isLoading: loadingSchedules } = useTopUpSchedules();
   const { data: courseCharges = [], isLoading: loadingCharges } = useCourseCharges();
@@ -118,21 +122,25 @@ export default function AdminDashboard() {
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
   
-  const scheduledBatchTopUps = [...topUpSchedules]
+  const allScheduledBatchTopUps = [...topUpSchedules]
     .filter(s => {
       const scheduledDate = new Date(s.scheduled_date);
       return s.type === 'batch' && s.status === 'scheduled' && scheduledDate <= thirtyDaysFromNow;
     })
-    .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime())
-    .slice(0, 8);
+    .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime());
+  
+  const scheduledBatchTopUps = allScheduledBatchTopUps
+    .slice((batchTopUpsPage - 1) * itemsPerPage, batchTopUpsPage * itemsPerPage);
 
-  const scheduledIndividualTopUps = [...topUpSchedules]
+  const allScheduledIndividualTopUps = [...topUpSchedules]
     .filter(s => {
       const scheduledDate = new Date(s.scheduled_date);
       return s.type === 'individual' && s.status === 'scheduled' && scheduledDate <= thirtyDaysFromNow;
     })
-    .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime())
-    .slice(0, 8);
+    .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime());
+  
+  const scheduledIndividualTopUps = allScheduledIndividualTopUps
+    .slice((individualTopUpsPage - 1) * itemsPerPage, individualTopUpsPage * itemsPerPage);
 
   // Recent enrollments sorted by created_at
   const recentEnrollments = [...enrollments]
@@ -143,10 +151,12 @@ export default function AdminDashboard() {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
-  const recentAccounts = [...accountHolders]
+  const allRecentAccounts = [...accountHolders]
     .filter(account => new Date(account.created_at) >= sevenDaysAgo)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  
+  const recentAccounts = allRecentAccounts
+    .slice((recentAccountsPage - 1) * itemsPerPage, recentAccountsPage * itemsPerPage);
 
   // Helper function to check if an account is currently enrolled
   const isAccountInSchool = (accountId: string): boolean => {
@@ -284,12 +294,7 @@ export default function AdminDashboard() {
       key: 'name', 
       header: individualColumns.find(c => c.key === 'name')?.header || 'Name',
       render: (item: typeof topUpSchedules[0]) => (
-        <div>
-          <p className="font-medium text-foreground">{item.account_name}</p>
-          {item.remarks && (
-            <p className="text-xs text-muted-foreground">{item.remarks}</p>
-          )}
-        </div>
+        <p className="font-medium text-foreground">{item.account_name}</p>
       )
     },
     { 
@@ -405,6 +410,34 @@ export default function AdminDashboard() {
                       setShowBatchDetailModal(true);
                     }}
                   />
+                  {allScheduledBatchTopUps.length > 0 && (
+                    <div className="flex items-center justify-between w-full mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {allScheduledBatchTopUps.length === 0 ? 0 : ((batchTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(batchTopUpsPage * itemsPerPage, allScheduledBatchTopUps.length)} of {allScheduledBatchTopUps.length} results
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBatchTopUpsPage(p => Math.max(1, p - 1))}
+                          disabled={batchTopUpsPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          Page {batchTopUpsPage} of {Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setBatchTopUpsPage(p => Math.min(Math.ceil(allScheduledBatchTopUps.length / itemsPerPage), p + 1))}
+                          disabled={batchTopUpsPage >= Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
                 <TabsContent value="individual">
                   <DataTable 
@@ -416,6 +449,34 @@ export default function AdminDashboard() {
                       setShowIndividualDetailModal(true);
                     }}
                   />
+                  {allScheduledIndividualTopUps.length > 0 && (
+                    <div className="flex items-center justify-between w-full mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {allScheduledIndividualTopUps.length === 0 ? 0 : ((individualTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(individualTopUpsPage * itemsPerPage, allScheduledIndividualTopUps.length)} of {allScheduledIndividualTopUps.length} results
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIndividualTopUpsPage(p => Math.max(1, p - 1))}
+                          disabled={individualTopUpsPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          Page {individualTopUpsPage} of {Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIndividualTopUpsPage(p => Math.min(Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage), p + 1))}
+                          disabled={individualTopUpsPage >= Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -482,6 +543,34 @@ export default function AdminDashboard() {
                 emptyMessage="No recent accounts"
                 onRowClick={(account) => navigate(`/admin/accounts/${account.id}`)}
               />
+              {allRecentAccounts.length > 0 && (
+                <div className="flex items-center justify-between w-full mt-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {allRecentAccounts.length === 0 ? 0 : ((recentAccountsPage - 1) * itemsPerPage) + 1} to {Math.min(recentAccountsPage * itemsPerPage, allRecentAccounts.length)} of {allRecentAccounts.length} results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentAccountsPage(p => Math.max(1, p - 1))}
+                      disabled={recentAccountsPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {recentAccountsPage} of {Math.ceil(allRecentAccounts.length / itemsPerPage)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecentAccountsPage(p => Math.min(Math.ceil(allRecentAccounts.length / itemsPerPage), p + 1))}
+                      disabled={recentAccountsPage >= Math.ceil(allRecentAccounts.length / itemsPerPage)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </ResizableSection>
@@ -586,6 +675,27 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Description and Internal Remarks */}
+                {selectedBatchDetail.remarks && (() => {
+                  try {
+                    const remarks = JSON.parse(selectedBatchDetail.remarks);
+                    return (
+                      <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Description</p>
+                          <p className="font-medium text-foreground">{remarks.description || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Internal Remarks</p>
+                          <p className="font-medium text-foreground">{remarks.internalRemark || '—'}</p>
+                        </div>
+                      </div>
+                    );
+                  } catch (e) {
+                    return null;
+                  }
+                })()}
+
                 {/* Schedule Information */}
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm font-medium text-foreground mb-3">Schedule Information</p>
@@ -618,18 +728,12 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                {/* Description/Remarks */}
+                {/* Additional Targeting Details */}
                 {selectedBatchDetail.remarks && (() => {
                   try {
                     const remarks = JSON.parse(selectedBatchDetail.remarks);
                     return (
                       <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-                        {remarks.description && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Description</p>
-                            <p className="font-medium text-foreground">{remarks.description}</p>
-                          </div>
-                        )}
                         {remarks.targetingType && (
                           <div>
                             <p className="text-xs text-muted-foreground mb-1">Targeting Type</p>
@@ -675,12 +779,7 @@ export default function AdminDashboard() {
                       </div>
                     );
                   } catch (e) {
-                    return (
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">Remarks</p>
-                        <p className="text-sm text-muted-foreground">{selectedBatchDetail.remarks}</p>
-                      </div>
-                    );
+                    return null;
                   }
                 })()}
 
@@ -898,6 +997,38 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Description and Internal Remarks */}
+                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Description</p>
+                    <p className="font-medium text-foreground">{(() => {
+                      if (selectedIndividualDetail.remarks) {
+                        try {
+                          const parsed = JSON.parse(selectedIndividualDetail.remarks);
+                          return parsed.description || '—';
+                        } catch (e) {
+                          return selectedIndividualDetail.remarks;
+                        }
+                      }
+                      return '—';
+                    })()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Internal Remarks</p>
+                    <p className="font-medium text-foreground">{(() => {
+                      if (selectedIndividualDetail.remarks) {
+                        try {
+                          const parsed = JSON.parse(selectedIndividualDetail.remarks);
+                          return parsed.internalRemark || '—';
+                        } catch (e) {
+                          return '—';
+                        }
+                      }
+                      return '—';
+                    })()}</p>
+                  </div>
+                </div>
+
                 {/* Schedule Information */}
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm font-medium text-foreground mb-3">Schedule Information</p>
@@ -951,14 +1082,6 @@ export default function AdminDashboard() {
                   }
                   return null;
                 })()}
-
-                {/* Remarks */}
-                {selectedIndividualDetail.remarks && (
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Remarks</p>
-                    <p className="text-sm text-foreground">{selectedIndividualDetail.remarks}</p>
-                  </div>
-                )}
 
                 {/* Execution Information (if completed) */}
                 {selectedIndividualDetail.executed_date && (

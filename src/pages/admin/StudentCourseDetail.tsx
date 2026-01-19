@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, DollarSign, GraduationCap, Building, Clock, User } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, GraduationCap, Building, Clock, User, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/shared/DataTable';
@@ -20,6 +20,14 @@ const billingCycleLabels: Record<BillingCycle, string> = {
   quarterly: 'Quarterly',
   biannually: 'Bi-annually',
   yearly: 'Annually',
+};
+
+const educationLevelLabels: Record<string, string> = {
+  primary: 'Primary',
+  secondary: 'Secondary',
+  post_secondary: 'Post-Secondary',
+  tertiary: 'Tertiary',
+  postgraduate: 'Postgraduate',
 };
 
 export default function StudentCourseDetail() {
@@ -212,7 +220,6 @@ export default function StudentCourseDetail() {
             <span>{course.provider}</span>
           </div>
         </div>
-        <StatusBadge status={course.status} />
       </div>
 
       {/* Summary Stats */}
@@ -293,21 +300,42 @@ export default function StudentCourseDetail() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Mode of Training</p>
-                <p className="font-medium capitalize">{course.mode_of_training || 'Online'}</p>
+                <p className="text-sm text-muted-foreground">Education Level</p>
+                <p className="font-medium">{course.education_level ? educationLevelLabels[course.education_level] : 'Not Set'}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <StatusBadge status={course.status} />
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Course Period</p>
+                <p className="text-sm text-muted-foreground">Course Start</p>
                 <p className="font-medium">
                   {formatDate(course.course_run_start)}
-                  {' – '}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Course End</p>
+                <p className="font-medium">
                   {course.course_run_end ? formatDate(course.course_run_end) : 'Ongoing'}
                 </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Mode of Training</p>
+                <p className="font-medium capitalize">{course.mode_of_training || 'Online'}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">

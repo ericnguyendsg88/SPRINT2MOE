@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, ArrowUp, Pencil, HelpCircle, Check, Wallet } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, AlertCircle, XCircle, Mail, Phone, Calendar, CreditCard, ArrowUp, Pencil, HelpCircle, Check, Wallet, MapPin, GraduationCap, CheckCircle, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -753,19 +753,19 @@ export default function StudentDetail() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Date of Birth</p>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <p className="font-medium text-foreground">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date of Birth</p>
+                      <p className="font-medium">
                         {formatDate(account.date_of_birth)} ({age} years old)
                       </p>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Email</p>
                       <EditableText
                         value={account.email}
                         onSave={(value) => handleFieldUpdate('email', value)}
@@ -775,10 +775,10 @@ export default function StudentDetail() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Phone</p>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Phone</p>
                       <EditableText
                         value={account.phone || ''}
                         onSave={(value) => handleFieldUpdate('phone', value)}
@@ -789,59 +789,80 @@ export default function StudentDetail() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Education Level</p>
-                    <p className="font-medium text-foreground">
-                      {account.education_level ? educationLevelLabels[account.education_level] : '—'}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Education Level</p>
+                      <p className="font-medium">
+                        {account.education_level ? educationLevelLabels[account.education_level] : '—'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Residential Status</p>
-                    <p className="font-medium text-foreground">
-                      {residentialStatusLabels[account.residential_status] || account.residential_status}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Residential Status</p>
+                      <p className="font-medium">
+                        {residentialStatusLabels[account.residential_status] || account.residential_status}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Schooling Status</p>
-                    <p className="font-medium text-foreground">
-                      {enrolledCourses.length > 0 ? 'In School' : 'Not in School'}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <BookOpen className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Schooling Status</p>
+                      <p className="font-medium">
+                        {enrolledCourses.length > 0 ? 'In School' : 'Not in School'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Created</p>
-                    <p className="font-medium text-foreground">
-                      {formatDate(account.created_at)}
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Created</p>
+                      <p className="font-medium">
+                        {formatDate(account.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Account Status</p>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      accountActiveStatus === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {accountActiveStatus === 'active' ? 'Active' : 'Inactive'}
-                    </span>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Account Status</p>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        accountActiveStatus === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {accountActiveStatus === 'active' ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-1 md:col-span-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Registered Address</p>
-                    <EditableText
-                      value={account.residential_address || ''}
-                      onSave={(value) => handleFieldUpdate('residential_address', value)}
-                      isEditMode={isEditMode}
-                      className="font-medium text-foreground"
-                      placeholder="Enter address..."
-                    />
+                  <div className="flex items-start gap-3 md:col-span-2">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Registered Address</p>
+                      <EditableText
+                        value={account.residential_address || ''}
+                        onSave={(value) => handleFieldUpdate('residential_address', value)}
+                        isEditMode={isEditMode}
+                        className="font-medium text-foreground"
+                        placeholder="Enter address..."
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1 md:col-span-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Mailing Address</p>
-                    <EditableText
-                      value={account.mailing_address || ''}
-                      onSave={(value) => handleFieldUpdate('mailing_address', value)}
-                      isEditMode={isEditMode}
-                      className="font-medium text-foreground"
-                      placeholder="Enter mailing address..."
-                    />
+                  <div className="flex items-start gap-3 md:col-span-2">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">Mailing Address</p>
+                      <EditableText
+                        value={account.mailing_address || ''}
+                        onSave={(value) => handleFieldUpdate('mailing_address', value)}
+                        isEditMode={isEditMode}
+                        className="font-medium text-foreground"
+                        placeholder="Enter mailing address..."
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

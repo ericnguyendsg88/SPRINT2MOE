@@ -701,7 +701,7 @@ export default function AccountManagement() {
 
           {/* Pagination Controls */}
           {filteredAndSortedAccounts.length > 0 && (
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-end gap-2 w-full">
               <Button
                 variant="outline"
                 size="sm"

@@ -782,11 +782,8 @@ export default function CourseFees() {
                         key: 'courseName', 
                         header: 'Course',
                         render: (item: any) => (
-                          <div 
-                            className="cursor-pointer hover:text-primary transition-colors"
-                            onClick={() => navigate(`/eservice/courses/${item.course.id}`)}
-                          >
-                            <p className="font-medium text-foreground hover:text-primary">{item.course.name}</p>
+                          <div>
+                            <p className="font-medium text-foreground">{item.course.name}</p>
                             <p className="text-xs text-muted-foreground">{item.course.provider}</p>
                           </div>
                         )
@@ -836,21 +833,9 @@ export default function CourseFees() {
                           <StatusBadge status={getEnrolledCoursePaymentStatus(item.course.id, item.course)} />
                         )
                       },
-                      {
-                        key: 'actions', 
-                        header: '',
-                        render: (item: any) => (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => navigate(`/eservice/courses/${item.course.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        )
-                      },
                     ]} 
-                    data={enrolledCourses} 
+                    data={enrolledCourses}
+                    onRowClick={(item) => navigate(`/eservice/courses/${item.course.id}`)}
                   />
                 )}
               </CardContent>
