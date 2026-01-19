@@ -1222,17 +1222,6 @@ export default function TopUpManagement() {
                   </div>
                 </PopoverContent>
               </Popover>
-
-              {/* Sort */}
-              <Select value={sortOption} onValueChange={(value: 'default' | 'recently-created') => setSortOption(value)}>
-                <SelectTrigger className="w-[160px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">By Schedule Date</SelectItem>
-                  <SelectItem value="recently-created">By Created Date</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Date Period Filters - Simplified */}
