@@ -245,18 +245,9 @@ export default function AccountBalance() {
       render: (item: Transaction & { balanceAfter: number }) => {
         let displayText = item.description || '—';
         
-        if (item.type === 'course_fee') {
-          // For course payments: extract course name from description if formatted
-          const match = item.description?.match(/Course fee payment: (.+)/);
-          if (match) {
-            displayText = `Course Payment ${match[1]}`;
-          } else if (item.description) {
-            displayText = item.description;
-          } else {
-            displayText = 'Course Payment';
-          }
-        }
-        // For top-ups: just show the description as-is
+        // For course payments and top-ups: show description as-is
+        // New format: "Course Payment: [Course Name] - [Billing Period]"
+        // For top-ups: "External payment received via [Method]" or custom description
         
         return (
           <div className="min-w-[200px]">

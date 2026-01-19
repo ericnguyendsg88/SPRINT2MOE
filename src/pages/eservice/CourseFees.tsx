@@ -274,15 +274,23 @@ export default function CourseFees() {
           balance: newBalance,
         });
 
-        // Create a transaction record for balance payment
-        await createTransactionMutation.mutateAsync({
-          account_id: currentUser.id,
-          type: 'course_fee',
-          amount: -balancePaid,
-          description: `Course fee payment: ${pendingCharges.length} charge(s)`,
-          reference: `CF-${Date.now()}`,
-          status: 'completed',
-        });
+        // Create transaction records for each charge paid with balance
+        for (const charge of pendingCharges) {
+          const chargeAmount = Number(charge.amount);
+          // Calculate proportional balance payment for this charge
+          const chargeBalancePortion = (chargeAmount / totalOutstanding) * balancePaid;
+          
+          if (chargeBalancePortion > 0) {
+            await createTransactionMutation.mutateAsync({
+              account_id: currentUser.id,
+              type: 'course_fee',
+              amount: -chargeBalancePortion,
+              description: `Course Payment: ${charge.course_name} - ${formatBillingPeriod(charge)}`,
+              reference: `CF-${Date.now()}-${charge.id.substring(0, 8)}`,
+              status: 'completed',
+            });
+          }
+        }
       }
 
       let description = `Paid ${pendingCharges.length} course fee(s). `;
@@ -368,22 +376,26 @@ export default function CourseFees() {
         });
       }
 
-      // 3. Deduct the full charge amount from balance
-      const newBalance = currentBalance - chargeTotal;
+      // 3. Deduct from balance: if using combined payment, only deduct balance portion
+      //    if using external only, the external payment was already added to balance above
+      const balanceToDeduct = balancePaid > 0 ? balancePaid : chargeTotal;
+      const newBalance = currentBalance - balanceToDeduct;
       await updateAccountMutation.mutateAsync({
         id: currentUser.id,
         balance: newBalance,
       });
 
-      // 4. Create a transaction record for course fee payment
-      await createTransactionMutation.mutateAsync({
-        account_id: currentUser.id,
-        type: 'course_fee',
-        amount: -chargeTotal,
-        description: `Course fee payment: ${selectedCharge.course_name}`,
-        reference: `CF-${Date.now()}`,
-        status: 'completed',
-      });
+      // 4. Create a transaction record for course fee payment (only account balance portion)
+      if (balanceToDeduct > 0) {
+        await createTransactionMutation.mutateAsync({
+          account_id: currentUser.id,
+          type: 'course_fee',
+          amount: -balanceToDeduct,
+          description: `Course Payment: ${selectedCharge.course_name} - ${formatBillingPeriod(selectedCharge)}`,
+          reference: `CF-${Date.now()}`,
+          status: 'completed',
+        });
+      }
 
       let description = '';
       if (balancePaid > 0 && externalPaid > 0) {
@@ -448,6 +460,21 @@ export default function CourseFees() {
   // Helper to check if payment is one-time
   const isOneTimePayment = (billingCycle: string) => {
     return !billingCycle || billingCycle === 'one_time';
+  };
+
+  // Helper to format billing period from due date
+  const formatBillingPeriod = (charge: CourseCharge): string => {
+    const course = courses.find(c => c.id === charge.course_id);
+    if (course && isOneTimePayment(course.billing_cycle)) {
+      return 'One-time Payment';
+    }
+    
+    // Format as "Month Year" (e.g., "January 2026")
+    const dueDate = new Date(charge.due_date);
+    return dueDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
   // Helper to get the payment status for an enrolled course (synced with Dashboard logic)
