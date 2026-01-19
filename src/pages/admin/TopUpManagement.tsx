@@ -1161,10 +1161,15 @@ export default function TopUpManagement() {
               {/* Status Filter - Multi-select */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-9 w-[160px] justify-between">
+                  <Button variant="outline" className="h-9 min-w-[160px] justify-between">
                     <CalendarClock className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
                     <span className="truncate">
-                      {filterStatuses.length === 3 ? 'All Status' : filterStatuses.length === 0 ? 'Status' : `${filterStatuses.length} selected`}
+                      {filterStatuses.length === 3 
+                        ? 'All Status' 
+                        : filterStatuses.length === 0 
+                        ? 'Status' 
+                        : filterStatuses.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
+                      }
                     </span>
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
                   </Button>
