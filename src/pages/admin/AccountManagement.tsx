@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Download, UserPlus, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, X, Check, EyeOff, Eye, ChevronDown, GraduationCap, School, Home, Wallet, Calendar, DollarSign } from 'lucide-react';
+import { Search, Plus, UserPlus, BookOpen, ArrowUpDown, ArrowUp, ArrowDown, X, Check, EyeOff, Eye, ChevronDown, GraduationCap, School, Home, Wallet, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,7 +43,6 @@ export default function AccountManagement() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [educationFilter, setEducationFilter] = useState<string[]>([]);
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string[]>([]);
   const [schoolingStatusFilter, setSchoolingStatusFilter] = useState<string[]>([]);
   const [balanceMin, setBalanceMin] = useState<string>('');
   const [balanceMax, setBalanceMax] = useState<string>('');
@@ -93,17 +92,6 @@ export default function AccountManagement() {
     return calculateAge(account.date_of_birth) <= 30;
   };
 
-  // Helper function to get payment status for an account
-  const getPaymentStatusForAccount = (accountId: string) => {
-    const studentCharges = courseCharges.filter(c => c.account_id === accountId);
-    if (studentCharges.length === 0) return 'scheduled';
-    const allClear = studentCharges.every(c => c.status === 'clear');
-    if (allClear) return 'fully_paid';
-    const hasOutstanding = studentCharges.some(c => c.status === 'outstanding' || c.status === 'partially_paid');
-    if (hasOutstanding) return 'outstanding';
-    return 'scheduled';
-  };
-
   // Helper function to get schooling status (in school if enrolled in at least 1 active course)
   const getSchoolingStatus = (accountId: string) => {
     const activeEnrollments = enrollments.filter(e => e.account_id === accountId && e.status === 'active');
@@ -126,12 +114,6 @@ export default function AccountManagement() {
     post_secondary: 'Post-Secondary',
     tertiary: 'Tertiary',
     postgraduate: 'Postgraduate',
-  };
-
-  const paymentStatusLabels: Record<string, string> = {
-    fully_paid: 'Fully Paid',
-    outstanding: 'Outstanding',
-    scheduled: 'Scheduled',
   };
 
   const schoolingStatusLabels: Record<string, string> = {
@@ -158,10 +140,6 @@ export default function AccountManagement() {
       const matchesEducation = educationFilter.length === 0 || 
         (account.education_level && educationFilter.includes(account.education_level));
       
-      // Payment status filter (multi-select)
-      const paymentStatus = getPaymentStatusForAccount(account.id);
-      const matchesPaymentStatus = paymentStatusFilter.length === 0 || paymentStatusFilter.includes(paymentStatus);
-      
       // Schooling status filter (multi-select)
       const schoolingStatus = getSchoolingStatus(account.id);
       const matchesSchoolingStatus = schoolingStatusFilter.length === 0 || schoolingStatusFilter.includes(schoolingStatus);
@@ -185,7 +163,7 @@ export default function AccountManagement() {
       const matchesActiveStatus = showInactive ? !isActive : isActive;
 
       return matchesSearch && matchesEducation && 
-             matchesPaymentStatus && matchesSchoolingStatus &&
+             matchesSchoolingStatus &&
              matchesResidentialStatus &&
              matchesBalanceMin && matchesBalanceMax &&
              matchesAgeMin && matchesAgeMax &&
@@ -221,7 +199,7 @@ export default function AccountManagement() {
     });
 
     return filtered;
-  }, [accountHolders, searchQuery, educationFilter, paymentStatusFilter, 
+  }, [accountHolders, searchQuery, educationFilter, 
       schoolingStatusFilter, residentialStatusFilter, balanceMin, balanceMax, ageMin, ageMax, 
       showInactive, sortField, sortDirection, courseCharges, enrollments]);
 
@@ -249,7 +227,6 @@ export default function AccountManagement() {
   const clearAllFilters = () => {
     setSearchQuery('');
     setEducationFilter([]);
-    setPaymentStatusFilter([]);
     setSchoolingStatusFilter([]);
     setResidentialStatusFilter([]);
     setBalanceMin('');
@@ -260,19 +237,12 @@ export default function AccountManagement() {
 
   // Check if any filters are active
   const hasActiveFilters = searchQuery || educationFilter.length > 0 ||
-    paymentStatusFilter.length > 0 || schoolingStatusFilter.length > 0 ||
-    residentialStatusFilter.length > 0 ||
+    schoolingStatusFilter.length > 0 || residentialStatusFilter.length > 0 ||
     balanceMin || balanceMax || ageMin || ageMax;
 
   // Toggle filter selection helpers
   const toggleEducationFilter = (value: string) => {
     setEducationFilter(prev => 
-      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
-    );
-  };
-
-  const togglePaymentStatusFilter = (value: string) => {
-    setPaymentStatusFilter(prev => 
       prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
     );
   };
@@ -645,35 +615,6 @@ export default function AccountManagement() {
                   </div>
                 </PopoverContent>
               </Popover>
-
-              {/* Payment Status Filter */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-9 w-[160px] justify-between">
-                    <DollarSign className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
-                    <span className="truncate">
-                      {paymentStatusFilter.length === 0 ? 'Payment' : `${paymentStatusFilter.length} selected`}
-                    </span>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[180px] p-3" align="start">
-                  <div className="space-y-2">
-                    {Object.entries(paymentStatusLabels).map(([value, label]) => (
-                      <div key={value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`payment-${value}`}
-                          checked={paymentStatusFilter.includes(value)}
-                          onCheckedChange={() => togglePaymentStatusFilter(value)}
-                        />
-                        <label htmlFor={`payment-${value}`} className="text-sm cursor-pointer">
-                          {label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
             </div>
 
             {/* Second Row: Range Filters + Clear */}
@@ -713,12 +654,6 @@ export default function AccountManagement() {
                 onChange={(e) => setAgeMax(e.target.value)}
                 className="w-[70px] h-8 text-xs"
               />
-
-              {/* Export Button */}
-              <Button variant="outline" size="sm" className="h-8 text-xs ml-auto">
-                <Download className="h-4 w-4 mr-1" />
-                Export
-              </Button>
             </div>
 
             {/* Results Count */}
