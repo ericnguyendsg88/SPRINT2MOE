@@ -99,8 +99,8 @@ export default function CourseDetail() {
 
   // Helper to calculate due date based on course billing settings and enrollment date
   const calculateDueDate = (enrollmentDate: Date = new Date()) => {
-    const billingDay = parseInt(course?.billing_date || '5') || 5; // Default to 5th
-    const dueDaysAfter = parseInt(course?.billing_due_date || '30') || 30; // Default to 30 days
+    const billingDay = course?.billing_date ?? 5; // Default to 5th
+    const dueDaysAfter = course?.billing_due_date ?? 30; // Default to 30 days
     
     const year = enrollmentDate.getFullYear();
     const month = enrollmentDate.getMonth();
@@ -824,7 +824,7 @@ export default function CourseDetail() {
                         },
                         billing_day: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
-                          value: getPaymentType() === 'One Time' ? '—' : (course.billing_date ? `${getOrdinalSuffix(parseInt(course.billing_date))} of the month` : '5th of the month'),
+                          value: getPaymentType() === 'One Time' ? '—' : (course.billing_date ? `${getOrdinalSuffix(course.billing_date)} of the month` : '5th of the month'),
                         },
                         payment_due: {
                           icon: <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />,
