@@ -40,6 +40,8 @@ type SortField = 'name' | 'age' | 'balance' | 'created_at' | 'education_level';
 type SortDirection = 'asc' | 'desc';
 
 export default function AccountManagement() {
+  // Cutoff timestamp for "New" badge - set to deployment time (January 16, 2026)
+  const NEW_BADGE_CUTOFF = new Date('2026-01-16T00:00:00').getTime();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [educationFilter, setEducationFilter] = useState<string[]>([]);
@@ -343,9 +345,19 @@ export default function AccountManagement() {
           {renderSortIcon('name')}
         </button>
       ),
-      render: (account: typeof accountHolders[0]) => (
-        <span className="font-medium text-foreground">{account.name}</span>
-      ),
+      render: (account: typeof accountHolders[0]) => {
+        const isRecent = new Date(account.created_at).getTime() >= NEW_BADGE_CUTOFF;
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="font-medium text-foreground">{account.name}</span>
+            {isRecent && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                NEW
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'nric',
