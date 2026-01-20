@@ -2212,6 +2212,76 @@ export default function TopUpManagement() {
                 )}
               </div>
 
+              {/* Targeting Rules Section (for batch only) */}
+              {selectedScheduleDetail.type === 'batch' && selectedScheduleDetail.remarks && (() => {
+                try {
+                  const remarksData = JSON.parse(selectedScheduleDetail.remarks);
+                  const { targetingType, criteria } = remarksData;
+                  
+                  if (!targetingType) return null;
+                  
+                  return (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+                      <div>
+                        <p className="text-xs text-blue-700 dark:text-blue-300 font-semibold mb-2">Top-up Rules</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Targeting Type</p>
+                        <p className="font-medium capitalize">{targetingType === 'everyone' ? 'All Education Accounts' : 'Customized Criteria'}</p>
+                      </div>
+                      
+                      {targetingType === 'customized' && criteria && (
+                        <div className="space-y-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Criteria Applied:</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            {(criteria.minAge || criteria.maxAge) && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Age Range</p>
+                                <p className="font-medium text-sm">
+                                  {criteria.minAge && criteria.maxAge 
+                                    ? `${criteria.minAge} - ${criteria.maxAge} years`
+                                    : criteria.minAge 
+                                    ? `${criteria.minAge}+ years`
+                                    : `Up to ${criteria.maxAge} years`}
+                                </p>
+                              </div>
+                            )}
+                            {(criteria.minBalance || criteria.maxBalance) && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Balance Range</p>
+                                <p className="font-medium text-sm">
+                                  {criteria.minBalance && criteria.maxBalance 
+                                    ? `S$${formatCurrency(criteria.minBalance)} - S$${formatCurrency(criteria.maxBalance)}`
+                                    : criteria.minBalance 
+                                    ? `S$${formatCurrency(criteria.minBalance)}+`
+                                    : `Up to S$${formatCurrency(criteria.maxBalance)}`}
+                                </p>
+                              </div>
+                            )}
+                            {criteria.educationStatus && criteria.educationStatus.length > 0 && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Education Level</p>
+                                <p className="font-medium text-sm capitalize">{criteria.educationStatus.join(', ')}</p>
+                              </div>
+                            )}
+                            {criteria.schoolingStatus && criteria.schoolingStatus !== 'all' && (
+                              <div>
+                                <p className="text-xs text-muted-foreground">Schooling Status</p>
+                                <p className="font-medium text-sm capitalize">
+                                  {criteria.schoolingStatus === 'in_school' ? 'In School' : 'Not in School'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch (e) {
+                  return null;
+                }
+              })()}
+
               {/* Description and Internal Remarks */}
               <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                 {selectedScheduleDetail.type === 'batch' && (() => {
