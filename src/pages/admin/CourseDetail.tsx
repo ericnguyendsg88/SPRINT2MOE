@@ -78,7 +78,7 @@ const SECTION_IDS = ['header', 'stats', 'course-details', 'enrolled-students'];
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -263,11 +263,11 @@ export default function CourseDetail() {
     setEditBillingCycle(course.billing_cycle as BillingCycle);
     setEditFee(String(course.fee));
     setEditStatus(course.status);
-    setIsEditing(true);
+    setIsEditModalOpen(true);
   };
 
   const cancelEditing = () => {
-    setIsEditing(false);
+    setIsEditModalOpen(false);
   };
 
   const handleSave = async () => {
@@ -287,7 +287,7 @@ export default function CourseDetail() {
       fee: parseFloat(editFee) || 0,
       status: editStatus,
     });
-    setIsEditing(false);
+    setIsEditModalOpen(false);
   };
 
   // Get enrolled students for this course
@@ -551,27 +551,10 @@ export default function CourseDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isEditing ? (
-                  <>
-                    <Button variant="outline" onClick={cancelEditing}>
-                      <X className="h-4 w-4 mr-2" />
-                      Cancel
-                    </Button>
-                    <Button 
-                      variant="accent" 
-                      onClick={handleSave}
-                      disabled={updateCourseMutation.isPending}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {updateCourseMutation.isPending ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="outline" onClick={startEditing}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Course
-                  </Button>
-                )}
+                <Button variant="outline" onClick={startEditing}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Course
+                </Button>
               </div>
             </div>
           </ResizableSection>
@@ -645,133 +628,8 @@ export default function CourseDetail() {
                 </div>
               </CardHeader>
               <CardContent>
-                {isEditing ? (() => {
-                  return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div className="grid gap-2">
-                        <Label>Course Name</Label>
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="flex items-center gap-2">
-                          Provider
-                          <Lock className="h-3 w-3 text-muted-foreground" />
-                        </Label>
-                        <Input
-                          value={editProvider}
-                          disabled
-                          className="bg-muted cursor-not-allowed"
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Education Level</Label>
-                        <Select value={editEducationLevel} onValueChange={setEditEducationLevel}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select education level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getAllowedEducationLevels().includes('primary') && (
-                              <SelectItem value="primary">Primary</SelectItem>
-                            )}
-                            {getAllowedEducationLevels().includes('secondary') && (
-                              <SelectItem value="secondary">Secondary</SelectItem>
-                            )}
-                            {getAllowedEducationLevels().includes('post_secondary') && (
-                              <SelectItem value="post_secondary">Post-Secondary</SelectItem>
-                            )}
-                            {getAllowedEducationLevels().includes('tertiary') && (
-                              <SelectItem value="tertiary">Tertiary</SelectItem>
-                            )}
-                            {getAllowedEducationLevels().includes('postgraduate') && (
-                              <SelectItem value="postgraduate">Postgraduate</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Mode of Training</Label>
-                        <Select value={editModeOfTraining} onValueChange={setEditModeOfTraining}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select mode" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="online">Online</SelectItem>
-                            <SelectItem value="in-person">In-Person</SelectItem>
-                            <SelectItem value="hybrid">Hybrid</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Status</Label>
-                        <Select value={editStatus} onValueChange={(v: 'active' | 'inactive') => setEditStatus(v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                          <Label className="flex items-center gap-2">
-                            Course Start
-                            <Lock className="h-3 w-3 text-muted-foreground" />
-                          </Label>
-                          <Input
-                            value={editCourseRunStart ? new Date(editCourseRunStart).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
-                            disabled
-                            className="bg-muted cursor-not-allowed"
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label className="flex items-center gap-2">
-                            Course End
-                            <Lock className="h-3 w-3 text-muted-foreground" />
-                          </Label>
-                          <Input
-                            value={editCourseRunEnd ? new Date(editCourseRunEnd).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
-                            disabled
-                            className="bg-muted cursor-not-allowed"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="flex items-center gap-2">
-                          Billing Cycle
-                          <Lock className="h-3 w-3 text-muted-foreground" />
-                        </Label>
-                        <Input
-                          value={billingCycleLabels[editBillingCycle]}
-                          disabled
-                          className="bg-muted cursor-not-allowed"
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="flex items-center gap-2">
-                          Fee ({billingCycleLabels[editBillingCycle]})
-                          <Lock className="h-3 w-3 text-muted-foreground" />
-                        </Label>
-                        <Input
-                          type="number"
-                          value={editFee}
-                          disabled
-                          className="bg-muted cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })() : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {visibleFields.map((field) => {
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {visibleFields.map((field) => {
                       const fieldConfig: Record<string, { icon: React.ReactNode; value: React.ReactNode }> = {
                         name: {
                           icon: <GraduationCap className="h-5 w-5 text-muted-foreground mt-0.5" />,
@@ -842,7 +700,6 @@ export default function CourseDetail() {
                       );
                     })}
                   </div>
-                )}
               </CardContent>
             </Card>
           </ResizableSection>
@@ -1181,6 +1038,170 @@ export default function CourseDetail() {
           onAddSection={handleAddSection} 
         />
       )}
+
+      {/* Edit Course Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Course</DialogTitle>
+            <DialogDescription>
+              Update course details. Fields with lock icons cannot be edited.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6 py-4">
+            {/* Course Name */}
+            <div className="grid gap-2">
+              <Label htmlFor="editCourseName">Course Name *</Label>
+              <Input
+                id="editCourseName"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Provider - Locked */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  Provider
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </Label>
+                <Input
+                  value={editProvider}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+
+              {/* Education Level */}
+              <div className="grid gap-2">
+                <Label htmlFor="editEducationLevel">Education Level</Label>
+                <Select value={editEducationLevel} onValueChange={setEditEducationLevel}>
+                  <SelectTrigger id="editEducationLevel">
+                    <SelectValue placeholder="Select education level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAllowedEducationLevels().includes('primary') && (
+                      <SelectItem value="primary">Primary</SelectItem>
+                    )}
+                    {getAllowedEducationLevels().includes('secondary') && (
+                      <SelectItem value="secondary">Secondary</SelectItem>
+                    )}
+                    {getAllowedEducationLevels().includes('post_secondary') && (
+                      <SelectItem value="post_secondary">Post-Secondary</SelectItem>
+                    )}
+                    {getAllowedEducationLevels().includes('tertiary') && (
+                      <SelectItem value="tertiary">Tertiary</SelectItem>
+                    )}
+                    {getAllowedEducationLevels().includes('postgraduate') && (
+                      <SelectItem value="postgraduate">Postgraduate</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Course Start and End - Same Line, Locked */}
+            <div className="grid gap-4 grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  Course Start
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </Label>
+                <Input
+                  value={editCourseRunStart ? new Date(editCourseRunStart).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  Course End
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </Label>
+                <Input
+                  value={editCourseRunEnd ? new Date(editCourseRunEnd).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Billing Cycle - Locked */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  Billing Cycle
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </Label>
+                <Input
+                  value={billingCycleLabels[editBillingCycle]}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+
+              {/* Fee - Locked */}
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-2">
+                  Fee per Cycle
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </Label>
+                <Input
+                  value={`$${parseFloat(editFee).toFixed(2)}`}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Mode of Training */}
+              <div className="grid gap-2">
+                <Label htmlFor="editModeOfTraining">Mode of Training</Label>
+                <Select value={editModeOfTraining} onValueChange={setEditModeOfTraining}>
+                  <SelectTrigger id="editModeOfTraining">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="online">Online</SelectItem>
+                    <SelectItem value="in-person">In-Person</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status */}
+              <div className="grid gap-2">
+                <Label htmlFor="editCourseStatus">Status</Label>
+                <Select value={editStatus} onValueChange={(v: 'active' | 'inactive') => setEditStatus(v)}>
+                  <SelectTrigger id="editCourseStatus">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={cancelEditing}>
+                Cancel
+              </Button>
+              <Button 
+                variant="accent" 
+                onClick={handleSave}
+                disabled={updateCourseMutation.isPending}
+              >
+                {updateCourseMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
