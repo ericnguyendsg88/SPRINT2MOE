@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, ArrowUpRight, X, Building, CreditCard, RefreshCw, CheckCircle, Calendar, CalendarDays, DollarSign, GraduationCap, ChevronDown, ChevronLeft, ChevronRight, Activity, Laptop, Check, ChevronsUpDown } from 'lucide-react';
+import { Search, Plus, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, ArrowUpRight, X, Building, CreditCard, RefreshCw, CheckCircle, Calendar, CalendarDays, DollarSign, GraduationCap, ChevronDown, ChevronLeft, ChevronRight, Activity, Laptop, Check, ChevronsUpDown, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DateInput } from '@/components/ui/date-input';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/components/shared/DataTable';
-import { useCourses, useCreateCourse } from '@/hooks/useCourses';
+import { useCourses, useCreateCourse, useUpdateCourse } from '@/hooks/useCourses';
 import { useEnrollments } from '@/hooks/useEnrollments';
 import { formatDate } from '@/lib/dateUtils';
 import {
@@ -70,6 +70,8 @@ export default function CourseManagement() {
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isReviewStep, setIsReviewStep] = useState(false);
   const [providerSearchOpen, setProviderSearchOpen] = useState(false);
+  const [isEditCourseOpen, setIsEditCourseOpen] = useState(false);
+  const [selectedCourseForEdit, setSelectedCourseForEdit] = useState<any>(null);
 
   // Form state for adding course
   const [courseName, setCourseName] = useState('');
@@ -85,10 +87,22 @@ export default function CourseManagement() {
   const [billingDayOfMonth, setBillingDayOfMonth] = useState(() => localStorage.getItem('defaultBillingDay') || '5');
   const [billingDueDaysAfter, setBillingDueDaysAfter] = useState(() => localStorage.getItem('defaultBillingDueDaysAfter') || '30');
 
+  // Edit form state
+  const [editCourseName, setEditCourseName] = useState('');
+  const [editProvider, setEditProvider] = useState('');
+  const [editCourseStart, setEditCourseStart] = useState('');
+  const [editCourseEnd, setEditCourseEnd] = useState('');
+  const [editBillingCycle, setEditBillingCycle] = useState('');
+  const [editFee, setEditFee] = useState('');
+  const [editModeOfTraining, setEditModeOfTraining] = useState('');
+  const [editCourseStatus, setEditCourseStatus] = useState('active');
+  const [editEducationLevel, setEditEducationLevel] = useState('');
+
   // Fetch data
   const { data: courses = [], isLoading: loadingCourses } = useCourses();
   const { data: enrollments = [] } = useEnrollments();
   const createCourseMutation = useCreateCourse();
+  const updateCourseMutation = useUpdateCourse();
   const { activeProviders, providers } = useProviders();
 
   // Get all providers (active and inactive) for filter
@@ -160,6 +174,7 @@ export default function CourseManagement() {
     quarterly: 'Quarterly',
     biannually: 'Bi-annually',
     yearly: 'Annually',
+    one_time: 'One Time',
   };
 
   const statusLabels: Record<string, string> = {
@@ -308,7 +323,20 @@ export default function CourseManagement() {
   };
 
   const handleRowClick = (courseId: string) => {
-    navigate(`/admin/courses/${courseId}`);
+    const course = courses.find(c => c.id === courseId);
+    if (course) {
+      setSelectedCourseForEdit(course);
+      setEditCourseName(course.name);
+      setEditProvider(course.provider);
+      setEditCourseStart(course.course_run_start || '');
+      setEditCourseEnd(course.course_run_end || '');
+      setEditBillingCycle(course.billing_cycle || '');
+      setEditFee(String(course.fee));
+      setEditModeOfTraining(course.mode_of_training || '');
+      setEditCourseStatus(course.status || 'active');
+      setEditEducationLevel(course.education_level || '');
+      setIsEditCourseOpen(true);
+    }
   };
 
   const resetForm = () => {
@@ -504,6 +532,37 @@ export default function CourseManagement() {
       toast.error('Failed to create course');
     }
   };
+
+  const handleUpdateCourse = async () => {
+    if (!selectedCourseForEdit) return;
+
+    try {
+      await updateCourseMutation.mutateAsync({
+        id: selectedCourseForEdit.id,
+        name: editCourseName.trim(),
+        provider: editProvider,
+        education_level: editEducationLevel || null,
+        mode_of_training: editModeOfTraining || null,
+        course_run_start: editCourseStart || null,
+        course_run_end: editCourseEnd || null,
+        billing_cycle: editBillingCycle as any,
+        fee: parseFloat(editFee) || 0,
+        status: editCourseStatus as any,
+      });
+      setIsEditCourseOpen(false);
+      setSelectedCourseForEdit(null);
+      toast.success('Course updated successfully');
+    } catch (error) {
+      toast.error('Failed to update course');
+    }
+  };
+
+  // Get education levels for selected provider in edit modal
+  const editProviderEducationLevels = useMemo(() => {
+    if (!editProvider) return [];
+    const providerData = providers.find(p => p.name === editProvider);
+    return providerData?.educationLevels || [];
+  }, [editProvider, providers]);
 
   // Table columns for DataTable
   const courseColumns = [
@@ -1355,6 +1414,186 @@ export default function CourseManagement() {
                 </Button>
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Course Dialog */}
+      <Dialog open={isEditCourseOpen} onOpenChange={setIsEditCourseOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Course</DialogTitle>
+            <DialogDescription>
+              Update course details. Fields with lock icons cannot be edited.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedCourseForEdit && (
+            <div className="grid gap-6 py-4">
+              {/* Course Name */}
+              <div className="grid gap-2">
+                <Label htmlFor="editCourseName">Course Name *</Label>
+                <Input
+                  id="editCourseName"
+                  value={editCourseName}
+                  onChange={(e) => setEditCourseName(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Provider - Locked */}
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    Provider
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  </Label>
+                  <Input
+                    value={editProvider}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Education Level */}
+                <div className="grid gap-2">
+                  <Label htmlFor="editEducationLevel">Education Level</Label>
+                  {editProviderEducationLevels.length > 1 ? (
+                    <Select value={editEducationLevel} onValueChange={setEditEducationLevel}>
+                      <SelectTrigger id="editEducationLevel">
+                        <SelectValue placeholder="Select education level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {editProviderEducationLevels.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {educationLevelLabels[level]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md border h-10">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {editProviderEducationLevels.length === 1
+                          ? educationLevelLabels[editProviderEducationLevels[0]]
+                          : educationLevelLabels[editEducationLevel] || '—'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Course Start and End - Same Line, Locked */}
+              <div className="grid gap-4 grid-cols-2">
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    Course Start
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  </Label>
+                  <Input
+                    value={editCourseStart ? new Date(editCourseStart).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    Course End
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  </Label>
+                  <Input
+                    value={editCourseEnd ? new Date(editCourseEnd).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Billing Cycle - Locked */}
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    Billing Cycle
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  </Label>
+                  <Input
+                    value={billingCycleLabels[editBillingCycle] || editBillingCycle}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Fee - Locked */}
+                <div className="grid gap-2">
+                  <Label className="flex items-center gap-2">
+                    Fee per Cycle
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  </Label>
+                  <Input
+                    value={`$${parseFloat(editFee).toFixed(2)}`}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Mode of Training */}
+                <div className="grid gap-2">
+                  <Label htmlFor="editModeOfTraining">Mode of Training</Label>
+                  <Select value={editModeOfTraining} onValueChange={setEditModeOfTraining}>
+                    <SelectTrigger id="editModeOfTraining">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="online">Online</SelectItem>
+                      <SelectItem value="in-person">In-Person</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Status */}
+                <div className="grid gap-2">
+                  <Label htmlFor="editCourseStatus">Status</Label>
+                  <Select value={editCourseStatus} onValueChange={setEditCourseStatus}>
+                    <SelectTrigger id="editCourseStatus">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center gap-3 pt-4 border-t">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setIsEditCourseOpen(false);
+                    navigate(`/admin/courses/${selectedCourseForEdit.id}`);
+                  }}
+                  className="text-primary hover:text-primary/90"
+                >
+                  <ArrowUpRight className="h-4 w-4 mr-2" />
+                  View Full Details
+                </Button>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setIsEditCourseOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="accent" 
+                    onClick={handleUpdateCourse}
+                    disabled={updateCourseMutation.isPending}
+                  >
+                    {updateCourseMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
