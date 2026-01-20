@@ -706,13 +706,13 @@ export default function AdminDashboard() {
                         {new Date(selectedBatchDetail.scheduled_date).toLocaleDateString('en-GB', { 
                           day: '2-digit', 
                           month: '2-digit', 
-                          year: 'numeric' 
+                          year: '2-digit' 
                         })}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Scheduled Time</p>
-                      <p className="font-medium text-foreground">{selectedBatchDetail.scheduled_time || '09:00'}</p>
+                      <p className="font-medium text-foreground">{formatTime(selectedBatchDetail.scheduled_time || '09:00')}</p>
                     </div>
                   </div>
                 </div>
@@ -791,7 +791,7 @@ export default function AdminDashboard() {
                       {new Date(selectedBatchDetail.executed_date).toLocaleDateString('en-GB', { 
                         day: '2-digit', 
                         month: '2-digit', 
-                        year: 'numeric'
+                        year: '2-digit'
                       })}
                     </p>
                   </div>
@@ -1039,13 +1039,13 @@ export default function AdminDashboard() {
                         {new Date(selectedIndividualDetail.scheduled_date).toLocaleDateString('en-GB', { 
                           day: '2-digit', 
                           month: '2-digit', 
-                          year: 'numeric' 
+                          year: '2-digit' 
                         })}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Scheduled Time</p>
-                      <p className="font-medium text-foreground">{selectedIndividualDetail.scheduled_time || '09:00'}</p>
+                      <p className="font-medium text-foreground">{formatTime(selectedIndividualDetail.scheduled_time || '09:00')}</p>
                     </div>
                   </div>
                 </div>
@@ -1091,7 +1091,7 @@ export default function AdminDashboard() {
                       {new Date(selectedIndividualDetail.executed_date).toLocaleDateString('en-GB', { 
                         day: '2-digit', 
                         month: '2-digit', 
-                        year: 'numeric'
+                        year: '2-digit'
                       })}
                     </p>
                   </div>

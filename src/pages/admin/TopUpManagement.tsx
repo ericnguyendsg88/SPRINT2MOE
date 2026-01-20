@@ -865,7 +865,7 @@ export default function TopUpManagement() {
             {new Date(item.created_at).toLocaleDateString('en-GB', {
               day: '2-digit',
               month: '2-digit',
-              year: 'numeric'
+              year: '2-digit'
             })}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -1013,7 +1013,7 @@ export default function TopUpManagement() {
               {schedDate.toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric'
+                year: '2-digit'
               })}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -1046,7 +1046,7 @@ export default function TopUpManagement() {
               {createdDate.toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric'
+                year: '2-digit'
               })}
             </span>
             <span className="text-xs text-muted-foreground">
@@ -2029,7 +2029,7 @@ export default function TopUpManagement() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Schedule Date</p>
-                    <p className="font-medium">{scheduleDate ? new Date(scheduleDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</p>
+                    <p className="font-medium">{scheduleDate ? new Date(scheduleDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Schedule Time</p>
@@ -2283,7 +2283,7 @@ export default function TopUpManagement() {
                     {new Date(selectedScheduleDetail.scheduled_date).toLocaleDateString('en-GB', {
                       day: '2-digit',
                       month: '2-digit',
-                      year: 'numeric'
+                      year: '2-digit'
                     })}
                   </p>
                 </div>
@@ -2310,7 +2310,7 @@ export default function TopUpManagement() {
                     {new Date(selectedScheduleDetail.executed_date).toLocaleDateString('en-GB', {
                       day: '2-digit',
                       month: '2-digit',
-                      year: 'numeric'
+                      year: '2-digit'
                     })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">Executed Time</p>
