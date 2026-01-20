@@ -409,82 +409,88 @@ export default function AdminDashboard() {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="batch">
-                  <DataTable 
-                    data={scheduledBatchTopUps} 
-                    columns={batchScheduleColumns}
-                    emptyMessage="No scheduled batch top-ups"
-                    onRowClick={(schedule) => {
-                      setSelectedBatchDetail(schedule);
-                      setShowBatchDetailModal(true);
-                    }}
-                  />
-                  {allScheduledBatchTopUps.length > 0 && (
-                    <div className="flex items-center justify-between w-full mt-4">
-                      <div className="text-sm text-muted-foreground">
-                        Showing {allScheduledBatchTopUps.length === 0 ? 0 : ((batchTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(batchTopUpsPage * itemsPerPage, allScheduledBatchTopUps.length)} of {allScheduledBatchTopUps.length} results
+                  <div className="min-h-[400px] flex flex-col">
+                    <DataTable 
+                      data={scheduledBatchTopUps} 
+                      columns={batchScheduleColumns}
+                      emptyMessage="No scheduled batch top-ups"
+                      onRowClick={(schedule) => {
+                        setSelectedBatchDetail(schedule);
+                        setShowBatchDetailModal(true);
+                      }}
+                    />
+                    <div className="flex-1" />
+                    {allScheduledBatchTopUps.length > 0 && (
+                      <div className="flex items-center justify-between w-full mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {allScheduledBatchTopUps.length === 0 ? 0 : ((batchTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(batchTopUpsPage * itemsPerPage, allScheduledBatchTopUps.length)} of {allScheduledBatchTopUps.length} results
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBatchTopUpsPage(p => Math.max(1, p - 1))}
+                            disabled={batchTopUpsPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {batchTopUpsPage} of {Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setBatchTopUpsPage(p => Math.min(Math.ceil(allScheduledBatchTopUps.length / itemsPerPage), p + 1))}
+                            disabled={batchTopUpsPage >= Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setBatchTopUpsPage(p => Math.max(1, p - 1))}
-                          disabled={batchTopUpsPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                          Page {batchTopUpsPage} of {Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setBatchTopUpsPage(p => Math.min(Math.ceil(allScheduledBatchTopUps.length / itemsPerPage), p + 1))}
-                          disabled={batchTopUpsPage >= Math.ceil(allScheduledBatchTopUps.length / itemsPerPage)}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </TabsContent>
                 <TabsContent value="individual">
-                  <DataTable 
-                    data={scheduledIndividualTopUps} 
-                    columns={individualScheduleColumns}
-                    emptyMessage="No scheduled individual top-ups"
-                    onRowClick={(schedule) => {
-                      setSelectedIndividualDetail(schedule);
-                      setShowIndividualDetailModal(true);
-                    }}
-                  />
-                  {allScheduledIndividualTopUps.length > 0 && (
-                    <div className="flex items-center justify-between w-full mt-4">
-                      <div className="text-sm text-muted-foreground">
-                        Showing {allScheduledIndividualTopUps.length === 0 ? 0 : ((individualTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(individualTopUpsPage * itemsPerPage, allScheduledIndividualTopUps.length)} of {allScheduledIndividualTopUps.length} results
+                  <div className="min-h-[400px] flex flex-col">
+                    <DataTable 
+                      data={scheduledIndividualTopUps} 
+                      columns={individualScheduleColumns}
+                      emptyMessage="No scheduled individual top-ups"
+                      onRowClick={(schedule) => {
+                        setSelectedIndividualDetail(schedule);
+                        setShowIndividualDetailModal(true);
+                      }}
+                    />
+                    <div className="flex-1" />
+                    {allScheduledIndividualTopUps.length > 0 && (
+                      <div className="flex items-center justify-between w-full mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {allScheduledIndividualTopUps.length === 0 ? 0 : ((individualTopUpsPage - 1) * itemsPerPage) + 1} to {Math.min(individualTopUpsPage * itemsPerPage, allScheduledIndividualTopUps.length)} of {allScheduledIndividualTopUps.length} results
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIndividualTopUpsPage(p => Math.max(1, p - 1))}
+                            disabled={individualTopUpsPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {individualTopUpsPage} of {Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIndividualTopUpsPage(p => Math.min(Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage), p + 1))}
+                            disabled={individualTopUpsPage >= Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIndividualTopUpsPage(p => Math.max(1, p - 1))}
-                          disabled={individualTopUpsPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm text-muted-foreground">
-                          Page {individualTopUpsPage} of {Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIndividualTopUpsPage(p => Math.min(Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage), p + 1))}
-                          disabled={individualTopUpsPage >= Math.ceil(allScheduledIndividualTopUps.length / itemsPerPage)}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>
