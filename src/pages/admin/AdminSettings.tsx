@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Building, Plus, Pencil, Ban, Calendar, UserX, Check, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building, Plus, Pencil, Ban, Calendar, UserX, UserPlus, Check, Search, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useProviders } from '@/contexts/ProvidersContext';
 import type { CourseProvider } from '@/data/providers';
@@ -47,14 +53,20 @@ export default function AdminSettings() {
   const [closureMonth, setClosureMonth] = useState('12'); // December
   const [closureDay, setClosureDay] = useState('31');
   
-  // Closure edit mode
-  const [isClosureEditMode, setIsClosureEditMode] = useState(false);
+  // Auto Account Creation Configuration
+  const [creationMonth, setCreationMonth] = useState('1'); // January
+  const [creationDay, setCreationDay] = useState('5'); // 5th
+  
+  // Unified edit mode for both creation and closure
+  const [isAccountLifecycleEditMode, setIsAccountLifecycleEditMode] = useState(false);
   const [originalClosureMonth, setOriginalClosureMonth] = useState('12');
   const [originalClosureDay, setOriginalClosureDay] = useState('31');
+  const [originalCreationMonth, setOriginalCreationMonth] = useState('1');
+  const [originalCreationDay, setOriginalCreationDay] = useState('5');
   
   // Confirmation dialog
   const [isSettingsSavedDialogOpen, setIsSettingsSavedDialogOpen] = useState(false);
-  const [savedSettingType, setSavedSettingType] = useState<'billing' | 'closure'>('billing');
+  const [savedSettingType, setSavedSettingType] = useState<'billing' | 'closure' | 'creation'>('billing');
 
   // Filter and paginate providers
   const filteredProviders = useMemo(() => {
@@ -155,18 +167,22 @@ export default function AdminSettings() {
     setIsBillingEditMode(false);
   };
 
-  const handleSaveAccountClosureConfig = () => {
+  const handleSaveAccountLifecycleConfig = () => {
     setOriginalClosureMonth(closureMonth);
     setOriginalClosureDay(closureDay);
-    setIsClosureEditMode(false);
-    setSavedSettingType('closure');
+    setOriginalCreationMonth(creationMonth);
+    setOriginalCreationDay(creationDay);
+    setIsAccountLifecycleEditMode(false);
+    setSavedSettingType('creation');
     setIsSettingsSavedDialogOpen(true);
   };
 
-  const handleCancelClosureEdit = () => {
+  const handleCancelAccountLifecycleEdit = () => {
     setClosureMonth(originalClosureMonth);
     setClosureDay(originalClosureDay);
-    setIsClosureEditMode(false);
+    setCreationMonth(originalCreationMonth);
+    setCreationDay(originalCreationDay);
+    setIsAccountLifecycleEditMode(false);
   };
 
   return (
@@ -340,7 +356,19 @@ export default function AdminSettings() {
               <Calendar className="h-5 w-5 text-success" />
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">Billing Configuration</h2>
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                Billing Configuration
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p className="text-xs">The system generates bills on the configured day of each billing cycle month (e.g., for quarterly billing, bills are generated in January, April, July, and October). Payment deadlines are calculated based on the number of days after the billing date.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h2>
               <p className="text-sm text-muted-foreground">Set site-wide billing date and due date</p>
             </div>
           </div>
@@ -352,7 +380,7 @@ export default function AdminSettings() {
           )}
         </div>
 
-        <div className="grid gap-6 max-w-2xl">
+        <div className="grid gap-6 max-w-3xl">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="billingDay">Billing Date (Day of Month)</Label>
@@ -403,80 +431,141 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* Auto Account Closure Configuration */}
+      {/* Auto Education Account Creation & Closure Configuration */}
       <div className="rounded-xl border border-border bg-card p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-              <UserX className="h-5 w-5 text-destructive" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <UserX className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-foreground">Auto Account Closure</h2>
-              <p className="text-sm text-muted-foreground">Configure automatic account closure period</p>
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                Auto Education Creation & Closure
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p className="text-xs">The system automatically creates Education Accounts for Singapore Citizens turning 16 on the configured creation date each year. Accounts are automatically closed on the configured closure date for those turning 30. Both actions are based on calendar year, not individual birthdays.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h2>
+              <p className="text-sm text-muted-foreground">Configure automatic Education Account creation and closure for Singapore Citizens</p>
             </div>
           </div>
-          {!isClosureEditMode && (
-            <Button variant="outline" size="sm" onClick={() => setIsClosureEditMode(true)}>
+          {!isAccountLifecycleEditMode && (
+            <Button variant="outline" size="sm" onClick={() => setIsAccountLifecycleEditMode(true)}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </Button>
           )}
         </div>
 
-        <div className="grid gap-6 max-w-2xl">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="closureMonth">Closure Month</Label>
-              <Select value={closureMonth} onValueChange={setClosureMonth} disabled={!isClosureEditMode}>
-                <SelectTrigger id="closureMonth">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">January</SelectItem>
-                  <SelectItem value="2">February</SelectItem>
-                  <SelectItem value="3">March</SelectItem>
-                  <SelectItem value="4">April</SelectItem>
-                  <SelectItem value="5">May</SelectItem>
-                  <SelectItem value="6">June</SelectItem>
-                  <SelectItem value="7">July</SelectItem>
-                  <SelectItem value="8">August</SelectItem>
-                  <SelectItem value="9">September</SelectItem>
-                  <SelectItem value="10">October</SelectItem>
-                  <SelectItem value="11">November</SelectItem>
-                  <SelectItem value="12">December</SelectItem>
-                </SelectContent>
-              </Select>
+        <div className="grid gap-6 max-w-3xl">
+          {/* Account Creation */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <h3 className="text-sm font-medium text-foreground">Account Creation</h3>
             </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="closureDay">Day of Month</Label>
-              <Select value={closureDay} onValueChange={setClosureDay} disabled={!isClosureEditMode}>
-                <SelectTrigger id="closureDay">
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                    <SelectItem key={day} value={day.toString()}>
-                      {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="creationMonth">Creation Month</Label>
+                <Select value={creationMonth} onValueChange={setCreationMonth} disabled={!isAccountLifecycleEditMode}>
+                  <SelectTrigger id="creationMonth">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">January</SelectItem>
+                    <SelectItem value="2">February</SelectItem>
+                    <SelectItem value="3">March</SelectItem>
+                    <SelectItem value="4">April</SelectItem>
+                    <SelectItem value="5">May</SelectItem>
+                    <SelectItem value="6">June</SelectItem>
+                    <SelectItem value="7">July</SelectItem>
+                    <SelectItem value="8">August</SelectItem>
+                    <SelectItem value="9">September</SelectItem>
+                    <SelectItem value="10">October</SelectItem>
+                    <SelectItem value="11">November</SelectItem>
+                    <SelectItem value="12">December</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="creationDay">Day of Month</Label>
+                <Select value={creationDay} onValueChange={setCreationDay} disabled={!isAccountLifecycleEditMode}>
+                  <SelectTrigger id="creationDay">
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()}>
+                        {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 p-3">
-            <p className="text-xs text-blue-900 dark:text-blue-100">
-              <strong>How it works:</strong> On {closureDay}{closureDay === '1' ? 'st' : closureDay === '2' ? 'nd' : closureDay === '3' ? 'rd' : 'th'} {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(closureMonth) - 1]} each year, the system will automatically close accounts for students who turn 30 years old that calendar year. Account closure is based on this set date, not on individual birthdays.
-            </p>
+          <div className="border-t border-border" />
+
+          {/* Account Closure */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-destructive" />
+              <h3 className="text-sm font-medium text-foreground">Account Closure</h3>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="closureMonth">Closure Month</Label>
+                <Select value={closureMonth} onValueChange={setClosureMonth} disabled={!isAccountLifecycleEditMode}>
+                  <SelectTrigger id="closureMonth">
+                    <SelectValue placeholder="Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">January</SelectItem>
+                    <SelectItem value="2">February</SelectItem>
+                    <SelectItem value="3">March</SelectItem>
+                    <SelectItem value="4">April</SelectItem>
+                    <SelectItem value="5">May</SelectItem>
+                    <SelectItem value="6">June</SelectItem>
+                    <SelectItem value="7">July</SelectItem>
+                    <SelectItem value="8">August</SelectItem>
+                    <SelectItem value="9">September</SelectItem>
+                    <SelectItem value="10">October</SelectItem>
+                    <SelectItem value="11">November</SelectItem>
+                    <SelectItem value="12">December</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="closureDay">Day of Month</Label>
+                <Select value={closureDay} onValueChange={setClosureDay} disabled={!isAccountLifecycleEditMode}>
+                  <SelectTrigger id="closureDay">
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <SelectItem key={day} value={day.toString()}>
+                        {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
-          {isClosureEditMode && (
+          {isAccountLifecycleEditMode && (
             <div className="flex gap-3">
-              <Button onClick={handleSaveAccountClosureConfig} variant="accent" className="w-fit">
-                Save Closure Configuration
+              <Button onClick={handleSaveAccountLifecycleConfig} variant="accent" className="w-fit">
+                Save Configuration
               </Button>
-              <Button onClick={handleCancelClosureEdit} variant="outline" className="w-fit">
+              <Button onClick={handleCancelAccountLifecycleEdit} variant="outline" className="w-fit">
                 Cancel
               </Button>
             </div>
@@ -652,7 +741,9 @@ export default function AdminSettings() {
                 <DialogDescription className="mt-1">
                   {savedSettingType === 'billing' 
                     ? 'Your billing configuration has been updated.'
-                    : 'Your account closure configuration has been updated.'}
+                    : savedSettingType === 'closure'
+                    ? 'Your account closure configuration has been updated.'
+                    : 'Your account creation configuration has been updated.'}
                 </DialogDescription>
               </div>
             </div>
